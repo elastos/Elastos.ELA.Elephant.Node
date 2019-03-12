@@ -1,0 +1,6 @@
+.idea/
+glide.lock
+/vendor/*
+elastos/
+/ela
+/ela-cli
