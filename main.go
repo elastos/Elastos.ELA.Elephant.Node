@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/elastos/Elastos.ELA.Elephant.Node/servers"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httprestful"
 	"github.com/elastos/Elastos.ELA.Utility/signal"
 	"github.com/elastos/Elastos.ELA/blockchain"
@@ -14,7 +15,6 @@ import (
 	"github.com/elastos/Elastos.ELA/node"
 	"github.com/elastos/Elastos.ELA/pow"
 	"github.com/elastos/Elastos.ELA/protocol"
-	"github.com/elastos/Elastos.ELA/servers"
 	"github.com/elastos/Elastos.ELA/servers/httpjsonrpc"
 	"github.com/elastos/Elastos.ELA/servers/httpnodeinfo"
 	"github.com/elastos/Elastos.ELA/servers/httpwebsocket"

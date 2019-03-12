@@ -1155,6 +1155,10 @@ func EstimateSmartFee(param Params) map[string]interface{} {
 	return ResponsePack(Success, GetFeeRate(count, int(confirm))*FeeRate)
 }
 
+func GetHistory(param Params) map[string]interface{} {
+	return ResponsePack(Success, param["addr"])
+}
+
 func GetFeeRate(count int, confirm int) int {
 	gap := count - confirm
 	if gap < 0 {

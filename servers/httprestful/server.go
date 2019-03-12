@@ -11,10 +11,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/elastos/Elastos.ELA.Elephant.Node/servers"
 	. "github.com/elastos/Elastos.ELA/common/config"
 	"github.com/elastos/Elastos.ELA/common/log"
 	. "github.com/elastos/Elastos.ELA/errors"
-	"github.com/elastos/Elastos.ELA/servers"
 )
 
 const (
@@ -31,9 +31,12 @@ const (
 	ApiGetBalanceByAsset   = "/api/v1/asset/balance/:addr/:assetid"
 	ApiGetUTXOByAsset      = "/api/v1/asset/utxo/:addr/:assetid"
 	ApiGetUTXOByAddr       = "/api/v1/asset/utxos/:addr"
-	ApiSendRawTransaction  = "/api/v1/transaction"
+	ApiSendRawTransaction  = "/api/v1/sendRawTx"
 	ApiGetTransactionPool  = "/api/v1/transactionpool"
 	ApiRestart             = "/api/v1/restart"
+
+	//extended
+	ApiGetHistory 		   = "/api/v1/history/:addr"
 )
 
 type Action struct {
@@ -113,6 +116,9 @@ func (rt *restServer) initializeMethod() {
 		ApiGetBalanceByAddr:    {name: "getbalancebyaddr", handler: servers.GetBalanceByAddr},
 		ApiGetBalanceByAsset:   {name: "getbalancebyasset", handler: servers.GetBalanceByAsset},
 		ApiRestart:             {name: "restart", handler: rt.Restart},
+
+		// extended
+		ApiGetHistory: {name: "gethistory", handler: servers.GetHistory},
 	}
 
 	postMethodMap := map[string]Action{
@@ -144,6 +150,8 @@ func (rt *restServer) getPath(url string) string {
 		return ApiGetUTXOByAsset
 	} else if strings.Contains(url, strings.TrimRight(ApiGetAsset, ":hash")) {
 		return ApiGetAsset
+	} else if strings.Contains(url, strings.TrimRight(ApiGetHistory, ":addr")) {
+		return ApiGetHistory
 	}
 	return url
 }
@@ -194,6 +202,8 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 
 	case ApiSendRawTransaction:
 
+	case ApiGetHistory:
+		req["addr"] = getParam(r,"addr")
 	}
 	return req
 }
