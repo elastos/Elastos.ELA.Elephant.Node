@@ -1,4 +1,4 @@
-package: github.com/elastos/Elaphant.Node
+package: github.com/elastos/Elastos.ELA.Elaphant.Node
 import:
 - package: github.com/elastos/Elastos.ELA
   version: v0.2.2

@@ -36,8 +36,8 @@ const (
 	ApiRestart             = "/api/v1/restart"
 
 	//extended
-	ApiGetHistory 		   = "/api/v1/history/:addr"
-	ApiSendRawTx  		   = "/api/v1/sendRawTx"
+	ApiGetHistory = "/api/v1/history/:addr"
+	ApiSendRawTx  = "/api/v1/sendRawTx"
 )
 
 type Action struct {
@@ -119,13 +119,13 @@ func (rt *restServer) initializeMethod() {
 		ApiRestart:             {name: "restart", handler: rt.Restart},
 
 		// extended
-		ApiGetHistory: 			{name: "gethistory", handler: servers.GetHistory},
+		ApiGetHistory: {name: "gethistory", handler: servers.GetHistory},
 	}
 
 	postMethodMap := map[string]Action{
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
 		// extended
-		ApiSendRawTx:			{name: "sendrawtx", handler: servers.SendRawTransaction},
+		ApiSendRawTx: {name: "sendrawtx", handler: servers.SendRawTransaction},
 	}
 	rt.postMap = postMethodMap
 	rt.getMap = getMethodMap
@@ -206,7 +206,7 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 	case ApiSendRawTransaction:
 
 	case ApiGetHistory:
-		req["addr"] = getParam(r,"addr")
+		req["addr"] = getParam(r, "addr")
 	}
 	return req
 }

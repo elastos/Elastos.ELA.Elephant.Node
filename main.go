@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/elastos/Elastos.ELA.Elephant.Node/common/config"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httprestful"
 	"github.com/elastos/Elastos.ELA.Utility/signal"
@@ -9,6 +8,7 @@ import (
 	"github.com/elastos/Elastos.ELA/blockchain/interfaces"
 	"github.com/elastos/Elastos.ELA/cli/password"
 	"github.com/elastos/Elastos.ELA/common"
+	"github.com/elastos/Elastos.ELA/common/config"
 	"github.com/elastos/Elastos.ELA/common/log"
 	"github.com/elastos/Elastos.ELA/dpos"
 	"github.com/elastos/Elastos.ELA/dpos/store"
@@ -71,7 +71,6 @@ func main() {
 	var pwd []byte
 	var arbitrator dpos.Arbitrator
 	var interrupt = signal.NewInterrupt()
-
 	log.Info("Node version: ", config.Version)
 	log.Info("BlockChain init")
 	versions := verconfig.InitVersions()
