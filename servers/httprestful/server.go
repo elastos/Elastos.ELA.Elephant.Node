@@ -31,12 +31,13 @@ const (
 	ApiGetBalanceByAsset   = "/api/v1/asset/balance/:addr/:assetid"
 	ApiGetUTXOByAsset      = "/api/v1/asset/utxo/:addr/:assetid"
 	ApiGetUTXOByAddr       = "/api/v1/asset/utxos/:addr"
-	ApiSendRawTransaction  = "/api/v1/sendRawTx"
+	ApiSendRawTransaction  = "/api/v1/sendtransaction"
 	ApiGetTransactionPool  = "/api/v1/transactionpool"
 	ApiRestart             = "/api/v1/restart"
 
 	//extended
 	ApiGetHistory 		   = "/api/v1/history/:addr"
+	ApiSendRawTx  		   = "/api/v1/sendRawTx"
 )
 
 type Action struct {
@@ -118,11 +119,13 @@ func (rt *restServer) initializeMethod() {
 		ApiRestart:             {name: "restart", handler: rt.Restart},
 
 		// extended
-		ApiGetHistory: {name: "gethistory", handler: servers.GetHistory},
+		ApiGetHistory: 			{name: "gethistory", handler: servers.GetHistory},
 	}
 
 	postMethodMap := map[string]Action{
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
+		// extended
+		ApiSendRawTx:			{name: "sendrawtx", handler: servers.SendRawTransaction},
 	}
 	rt.postMap = postMethodMap
 	rt.getMap = getMethodMap

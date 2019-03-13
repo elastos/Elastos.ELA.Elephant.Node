@@ -17,13 +17,12 @@ var (
 )
 
 type Configuration struct {
-	HttpRestPort         int                  `json:"HttpRestPort"`
+	HttpRestPort int `json:"HttpRestPort"`
 }
 
 type ConfigFile struct {
 	ConfigFile Configuration `json:"Configuration"`
 }
-
 
 func init() {
 	if _, err := os.Stat(DefaultConfigFilename); os.IsNotExist(err) {
