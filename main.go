@@ -10,5 +10,5 @@ func main() {
 	var interrupt = signal.NewInterrupt()
 	go ela.Go()
 	go id.Go()
-	<- interrupt.C
+	<-interrupt.C
 }
