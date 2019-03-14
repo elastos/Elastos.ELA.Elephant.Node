@@ -2,5 +2,5 @@
 glide.lock
 /vendor/*
 elastos/
-/ela
+elastos_did/
 /ela-cli
