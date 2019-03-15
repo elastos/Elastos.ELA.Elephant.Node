@@ -9,6 +9,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/pow"
 	aux "github.com/elastos/Elastos.ELA/auxpow"
 	chain "github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
@@ -20,7 +21,6 @@ import (
 	. "github.com/elastos/Elastos.ELA/core/types/payload"
 	. "github.com/elastos/Elastos.ELA/errors"
 	"github.com/elastos/Elastos.ELA/p2p/msg"
-	"github.com/elastos/Elastos.ELA/pow"
 	. "github.com/elastos/Elastos.ELA/protocol"
 )
 
