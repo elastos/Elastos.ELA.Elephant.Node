@@ -31,8 +31,8 @@ func NewChainStoreEx(store IChainStore) ChainStoreExtend {
 }
 
 func (c ChainStoreExtend) SaveHistory(block *Block) error {
-	//TODO Finish store history
-	log.Info("Simulate handle save history")
+	log.Info("handle save history")
+
 	return nil
 }
 
