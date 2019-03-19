@@ -1,6 +1,7 @@
 package ela
 
 import (
+	. "github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/pow"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httprestful"
@@ -75,11 +76,14 @@ func Go() {
 	log.Info("BlockChain init")
 	versions := verconfig.InitVersions()
 	var dposStore interfaces.IDposStore
+	var chainStoreEx IChainStoreExtend
 	chainStore, err := blockchain.NewChainStore(filepath.Join(config.DataPath, config.DataDir, config.ChainDir))
 	if err != nil {
 		goto ERROR
 	}
 	defer chainStore.Close()
+	chainStoreEx = NewChainStoreEx(chainStore)
+	defer chainStoreEx.CloseEx()
 	dposStore, err = store.NewDposStore(filepath.Join(config.DataPath, config.DataDir, config.DposDir))
 	if err != nil {
 		goto ERROR
