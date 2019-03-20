@@ -3,7 +3,7 @@ package pow
 import (
 	"encoding/binary"
 	"errors"
-	. "github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
 	"math"
 	"math/rand"
 	"sort"
@@ -351,7 +351,7 @@ func (pow *PowService) BlockPersistCompleted(v interface{}) {
 	log.Debug()
 	if block, ok := v.(*Block); ok {
 		log.Infof("persist block: %s, block height %d", block.Hash(), block.Height)
-		DefaultChainStoreEx.AddTask(block)
+		blockchain.DefaultChainStoreEx.AddTask(block)
 		err := node.LocalNode.CleanSubmittedTransactions(block)
 		if err != nil {
 			log.Warn(err)

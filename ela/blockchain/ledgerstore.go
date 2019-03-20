@@ -9,7 +9,7 @@ var DefaultChainStoreEx IChainStoreExtend
 
 type IChainStoreExtend interface {
 	IChainStore
-	SaveHistory(block *Block) error
+	persistHistory(block *Block) error
 	CloseEx()
 	AddTask(task interface{})
 }

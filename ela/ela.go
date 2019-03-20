@@ -82,7 +82,10 @@ func Go() {
 		goto ERROR
 	}
 	defer chainStore.Close()
-	chainStoreEx = NewChainStoreEx(chainStore)
+	chainStoreEx, err = NewChainStoreEx(chainStore, filepath.Join(config.DataPath, config.DataDir, "ext",))
+	if err != nil {
+		goto ERROR
+	}
 	defer chainStoreEx.CloseEx()
 	dposStore, err = store.NewDposStore(filepath.Join(config.DataPath, config.DataDir, config.DposDir))
 	if err != nil {

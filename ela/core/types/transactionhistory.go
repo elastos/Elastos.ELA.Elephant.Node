@@ -20,7 +20,7 @@ type TransactionHistory struct {
 	Memo       string
 }
 
-func (th TransactionHistory) Serialize(w io.Writer) error {
+func (th *TransactionHistory) Serialize(w io.Writer) error {
 	err := common.WriteVarString(w, th.Address)
 	if err != nil {
 		return errors.New("[TransactionHistory], Address serialize failed.")
@@ -80,7 +80,7 @@ func (th TransactionHistory) Serialize(w io.Writer) error {
 	return nil
 }
 
-func (th TransactionHistory) Deserialize(r io.Reader) error {
+func (th *TransactionHistory) Deserialize(r io.Reader) error {
 	var err error
 	th.Address, err = common.ReadVarString(r)
 	if err != nil {
@@ -131,6 +131,14 @@ func (th TransactionHistory) Deserialize(r io.Reader) error {
 			return errors.New("[TransactionHistory], output:" + str + " deserialize failed.")
 		}
 		th.Outputs = append(th.Outputs, str)
+	}
+	th.TxType , err = common.ReadVarString(r)
+	if err != nil {
+		return errors.New("[TransactionHistory], TxType serialize failed.")
+	}
+	th.Memo , err = common.ReadVarString(r)
+	if err != nil {
+		return errors.New("[TransactionHistory], Memo serialize failed.")
 	}
 	return nil
 }
