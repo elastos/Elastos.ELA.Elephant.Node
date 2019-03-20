@@ -132,11 +132,11 @@ func (th *TransactionHistory) Deserialize(r io.Reader) error {
 		}
 		th.Outputs = append(th.Outputs, str)
 	}
-	th.TxType , err = common.ReadVarString(r)
+	th.TxType, err = common.ReadVarString(r)
 	if err != nil {
 		return errors.New("[TransactionHistory], TxType serialize failed.")
 	}
-	th.Memo , err = common.ReadVarString(r)
+	th.Memo, err = common.ReadVarString(r)
 	if err != nil {
 		return errors.New("[TransactionHistory], Memo serialize failed.")
 	}

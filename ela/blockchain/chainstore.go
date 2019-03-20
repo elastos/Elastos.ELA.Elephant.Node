@@ -59,7 +59,7 @@ func NewChainStoreEx(chainstore IChainStore, filePath string) (ChainStoreExtend,
 	return c, nil
 }
 
-func (c ChainStoreExtend) Close(){
+func (c ChainStoreExtend) Close() {
 
 }
 

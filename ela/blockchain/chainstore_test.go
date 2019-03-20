@@ -3,12 +3,12 @@ package blockchain
 import (
 	"bytes"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/core/types"
-	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/blockchain"
+	"github.com/elastos/Elastos.ELA/common"
 	"testing"
 )
 
-func Test_Txhistory(t *testing.T){
+func Test_Txhistory(t *testing.T) {
 	st, err := blockchain.NewLevelDB("/Users/clark/workspace/golang/src/github.com/elastos/Elastos.ELA.Elephant.Node/elastos/data/ext")
 	if err != nil {
 		t.Fatal(err)
@@ -23,7 +23,7 @@ func Test_Txhistory(t *testing.T){
 	if err != nil {
 		t.Fatal(err)
 	}
-	data , err := st.Get(key.Bytes())
+	data, err := st.Get(key.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
