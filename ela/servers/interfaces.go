@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
 	"math"
 	"time"
 
@@ -1156,7 +1157,16 @@ func EstimateSmartFee(param Params) map[string]interface{} {
 }
 
 func GetHistory(param Params) map[string]interface{} {
-	return ResponsePack(Success, param["addr"])
+	addr, ok := param.String("addr")
+	if !ok {
+		return ResponsePack(InvalidParams, "")
+	}
+	_, err := common.Uint168FromAddress(addr)
+	if err != nil {
+		return ResponsePack(InvalidParams, "")
+	}
+	txhs := blockchain.DefaultChainStoreEx.GetTxHistory(addr)
+	return ResponsePack(Success, txhs)
 }
 
 func GetFeeRate(count int, confirm int) int {
