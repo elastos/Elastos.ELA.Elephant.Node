@@ -30,7 +30,6 @@ func (c ChainStoreExtend) persistTransactionHistory(txhs []types.TransactionHist
 			c.rollback()
 			log.Fatal("Error persist transaction history")
 			os.Exit(-1)
-			break
 		}
 	}
 	c.commit()

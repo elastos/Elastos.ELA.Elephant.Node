@@ -1,12 +1,15 @@
 package blockchain
 
 import (
+	"bytes"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/core/types"
 	. "github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common/log"
 	. "github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
+	common2 "github.com/xiaomingfuckeasylife/Elastos.ELA/common"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -63,8 +66,7 @@ func (c ChainStoreExtend) Close() {
 
 }
 
-func (c ChainStoreExtend) persistHistory(block *Block) error {
-	log.Info("handle persist history")
+func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 	txs := block.Transactions
 	txhs := make([]types.TransactionHistory, 0)
 	for i := 0; i < len(txs); i++ {
@@ -82,7 +84,7 @@ func (c ChainStoreExtend) persistHistory(block *Block) error {
 					txh.Address = address
 					txh.Inputs = []string{MINING_ADDR}
 					txh.TxType = txTypeEnum[tx.TxType]
-					txh.Txid , _ = common.ReverseHexString(tx.Hash().String())
+					txh.Txid, _ = common.ReverseHexString(tx.Hash().String())
 					txh.Height = uint64(block.Height)
 					txh.CreateTime = uint64(block.Header.Timestamp)
 					txh.Type = INCOME
@@ -176,7 +178,7 @@ func (c ChainStoreExtend) persistHistory(block *Block) error {
 				txh.Address = k
 				txh.Inputs = from
 				txh.TxType = txTypeEnum[tx.TxType]
-				txh.Txid , _ = common.ReverseHexString(tx.Hash().String())
+				txh.Txid, _ = common.ReverseHexString(tx.Hash().String())
 				txh.Height = uint64(block.Height)
 				txh.CreateTime = uint64(block.Header.Timestamp)
 				txh.Type = transferType
@@ -191,7 +193,7 @@ func (c ChainStoreExtend) persistHistory(block *Block) error {
 				txh.Address = k
 				txh.Inputs = from
 				txh.TxType = txTypeEnum[tx.TxType]
-				txh.Txid , _ = common.ReverseHexString(tx.Hash().String())
+				txh.Txid, _ = common.ReverseHexString(tx.Hash().String())
 				txh.Height = uint64(block.Height)
 				txh.CreateTime = uint64(block.Header.Timestamp)
 				txh.Type = SPEND
@@ -218,7 +220,7 @@ func (c ChainStoreExtend) loop() {
 			now := time.Now()
 			switch kind := t.(type) {
 			case *Block:
-				c.persistHistory(kind)
+				c.persistTxHistory(kind)
 				tcall := float64(time.Now().Sub(now)) / float64(time.Second)
 				log.Debugf("handle SaveHistory time cost: %g num transactions:%d", tcall, len(kind.Transactions))
 			}
@@ -227,4 +229,23 @@ func (c ChainStoreExtend) loop() {
 			return
 		}
 	}
+}
+
+func (c ChainStoreExtend) GetTxHistory(addr string) types.TransactionHistorySorter {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataTxHistoryPrefix))
+	common2.WriteVarString(key, addr)
+
+	iter := c.NewIterator(key.Bytes())
+	defer iter.Release()
+	var txhs types.TransactionHistorySorter
+	for iter.Next() {
+		val := new(bytes.Buffer)
+		val.Write(iter.Value())
+		txh := types.TransactionHistory{}
+		txh.Deserialize(val)
+		txhs = append(txhs, txh)
+	}
+	sort.Sort(txhs)
+	return txhs
 }

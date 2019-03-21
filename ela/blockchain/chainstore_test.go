@@ -9,7 +9,7 @@ import (
 )
 
 func Test_Txhistory(t *testing.T) {
-	st, err := blockchain.NewLevelDB("/Users/clark/workspace/golang/src/github.com/elastos/Elastos.ELA.Elephant.Node/elastos/data/ext")
+	st, err := blockchain.NewLevelDB("elastos/data/ext")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,8 +33,8 @@ func Test_Txhistory(t *testing.T) {
 	txh.Deserialize(value)
 }
 
-func Test_TxHistoryIterator(t *testing.T){
-	st, err := blockchain.NewLevelDB("/Users/clark/workspace/golang/src/github.com/elastos/Elastos.ELA.Elephant.Node/elastos/data/ext")
+func Test_TxHistoryIterator(t *testing.T) {
+	st, err := blockchain.NewLevelDB("elastos/data/ext")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,24 @@ func Test_TxHistoryIterator(t *testing.T){
 		val.Write(it.Value())
 		txh := types.TransactionHistory{}
 		txh.Deserialize(val)
-		t.Logf("txid : %s, height = %d , value = %d , type = %s",txh.Txid,txh.Height,txh.Value,txh.Type)
+		t.Logf("txid : %s, height = %d , value = %d , type = %s", txh.Txid, txh.Height, txh.Value, txh.Type)
 	}
+	it.Release()
+}
 
+func Test_GetTxHistory(t *testing.T) {
+
+	chainStore, err := blockchain.NewChainStore("elastos/data/chain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer chainStore.Close()
+	chainStoreEx, err := NewChainStoreEx(chainStore, "elastos/data/ext")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := chainStoreEx.GetTxHistory("EN8WSL4Wt1gM3YjTcHgG7ckBiadtcaNgx4")
+	for _, v := range result {
+		t.Log(v)
+	}
 }

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/pkg/errors"
 	"io"
@@ -142,3 +143,15 @@ func (th *TransactionHistory) Deserialize(r io.Reader) error {
 	}
 	return nil
 }
+
+func (th TransactionHistory) String() string {
+	return fmt.Sprintf("addr: %s,txid: %s,value: %d,height: %d", th.Address, th.Txid, th.Value, th.Height)
+}
+
+// TransactionHistorySorter implements sort.Interface for []TransactionHistory based on
+// the Height field.
+type TransactionHistorySorter []TransactionHistory
+
+func (a TransactionHistorySorter) Len() int           { return len(a) }
+func (a TransactionHistorySorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a TransactionHistorySorter) Less(i, j int) bool { return a[i].Height < a[j].Height }
