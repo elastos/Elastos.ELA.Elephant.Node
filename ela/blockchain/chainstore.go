@@ -82,7 +82,7 @@ func (c ChainStoreExtend) persistHistory(block *Block) error {
 					txh.Address = address
 					txh.Inputs = []string{MINING_ADDR}
 					txh.TxType = txTypeEnum[tx.TxType]
-					txh.Txid = tx.Hash().String()
+					txh.Txid , _ = common.ReverseHexString(tx.Hash().String())
 					txh.Height = uint64(block.Height)
 					txh.CreateTime = uint64(block.Header.Timestamp)
 					txh.Type = INCOME
@@ -176,7 +176,7 @@ func (c ChainStoreExtend) persistHistory(block *Block) error {
 				txh.Address = k
 				txh.Inputs = from
 				txh.TxType = txTypeEnum[tx.TxType]
-				txh.Txid = tx.Hash().String()
+				txh.Txid , _ = common.ReverseHexString(tx.Hash().String())
 				txh.Height = uint64(block.Height)
 				txh.CreateTime = uint64(block.Header.Timestamp)
 				txh.Type = transferType
@@ -191,7 +191,7 @@ func (c ChainStoreExtend) persistHistory(block *Block) error {
 				txh.Address = k
 				txh.Inputs = from
 				txh.TxType = txTypeEnum[tx.TxType]
-				txh.Txid = tx.Hash().String()
+				txh.Txid , _ = common.ReverseHexString(tx.Hash().String())
 				txh.Height = uint64(block.Height)
 				txh.CreateTime = uint64(block.Header.Timestamp)
 				txh.Type = SPEND

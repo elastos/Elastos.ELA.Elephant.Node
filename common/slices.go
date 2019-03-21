@@ -12,3 +12,4 @@ func Contains(c interface{}, s interface{}) bool {
 	}
 	return false
 }
+

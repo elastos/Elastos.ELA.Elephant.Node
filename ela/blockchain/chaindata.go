@@ -40,11 +40,11 @@ func (c ChainStoreExtend) persistTransactionHistory(txhs []types.TransactionHist
 func (c ChainStoreExtend) doPersistTransactionHistory(history types.TransactionHistory) error {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataTxHistoryPrefix))
-	err := common.WriteUint64(key, history.Height)
+	err := common.WriteVarString(key, history.Address)
 	if err != nil {
 		return err
 	}
-	err = common.WriteVarString(key, history.Address)
+	err = common.WriteUint64(key, history.Height)
 	if err != nil {
 		return err
 	}

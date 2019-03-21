@@ -32,3 +32,25 @@ func Test_Txhistory(t *testing.T) {
 	value.Write(data)
 	txh.Deserialize(value)
 }
+
+func Test_TxHistoryIterator(t *testing.T){
+	st, err := blockchain.NewLevelDB("/Users/clark/workspace/golang/src/github.com/elastos/Elastos.ELA.Elephant.Node/elastos/data/ext")
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataTxHistoryPrefix))
+	err = common.WriteVarString(key, "EN8WSL4Wt1gM3YjTcHgG7ckBiadtcaNgx4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	it := st.NewIterator([]byte(key.Bytes()))
+	for it.Next() {
+		val := new(bytes.Buffer)
+		val.Write(it.Value())
+		txh := types.TransactionHistory{}
+		txh.Deserialize(val)
+		t.Logf("txid : %s, height = %d , value = %d , type = %s",txh.Txid,txh.Height,txh.Value,txh.Type)
+	}
+
+}
