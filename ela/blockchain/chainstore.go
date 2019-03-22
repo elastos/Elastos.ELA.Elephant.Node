@@ -249,3 +249,9 @@ func (c ChainStoreExtend) GetTxHistory(addr string) types.TransactionHistorySort
 	sort.Sort(txhs)
 	return txhs
 }
+
+func (c ChainStoreExtend) GetTxHistoryByPage(addr string, pageNum, pageSize uint32) types.TransactionHistorySorter {
+	txhs := c.GetTxHistory(addr)
+	from := (pageNum - 1) * pageSize
+	return txhs.Filter(from, pageSize)
+}

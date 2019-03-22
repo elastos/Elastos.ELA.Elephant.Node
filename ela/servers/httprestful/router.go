@@ -126,3 +126,10 @@ func getParam(r *http.Request, key string) string {
 	val, _ := params[key]
 	return val
 }
+
+func getQueryParam(r *http.Request, param map[string]interface{}) {
+	for _, v := range strings.Split(r.URL.RawQuery, "&") {
+		a := strings.Split(v, "=")
+		param[a[0]] = a[1]
+	}
+}

@@ -155,3 +155,17 @@ type TransactionHistorySorter []TransactionHistory
 func (a TransactionHistorySorter) Len() int           { return len(a) }
 func (a TransactionHistorySorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a TransactionHistorySorter) Less(i, j int) bool { return a[i].Height < a[j].Height }
+
+func (a TransactionHistorySorter) Filter(from, size uint32) TransactionHistorySorter {
+	rst := TransactionHistorySorter{}
+	for i, v := range a {
+		if uint32(i) < from {
+			continue
+		}
+		rst = append(rst, v)
+		if uint32(len(rst)) == size {
+			break
+		}
+	}
+	return rst
+}

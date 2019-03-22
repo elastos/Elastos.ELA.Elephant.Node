@@ -14,4 +14,5 @@ type IChainStoreExtend interface {
 	CloseEx()
 	AddTask(task interface{})
 	GetTxHistory(addr string) types.TransactionHistorySorter
+	GetTxHistoryByPage(addr string, pageNum, pageSize uint32) types.TransactionHistorySorter
 }

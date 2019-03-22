@@ -1165,8 +1165,24 @@ func GetHistory(param Params) map[string]interface{} {
 	if err != nil {
 		return ResponsePack(InvalidParams, "")
 	}
-	txhs := blockchain.DefaultChainStoreEx.GetTxHistory(addr)
-	return ResponsePack(Success, txhs)
+	ok = param.HasKey("pageNum")
+	ok1 := param.HasKey("pageSize")
+	if !ok && !ok1 {
+		txhs := blockchain.DefaultChainStoreEx.GetTxHistory(addr)
+		return ResponsePack(Success, txhs)
+	} else if ok && ok1 {
+		pageNum, cool := param.Uint("pageNum")
+		if !cool {
+			return ResponsePack(InvalidParams, "")
+		}
+		pageSize, cool := param.Uint("pageSize")
+		if !cool {
+			return ResponsePack(InvalidParams, "")
+		}
+		txhs := blockchain.DefaultChainStoreEx.GetTxHistoryByPage(addr, pageNum, pageSize)
+		return ResponsePack(Success, txhs)
+	}
+	return ResponsePack(InvalidParams, "")
 }
 
 func GetFeeRate(count int, confirm int) int {

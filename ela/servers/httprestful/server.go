@@ -207,6 +207,7 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 
 	case ApiGetHistory:
 		req["addr"] = getParam(r, "addr")
+		getQueryParam(r, req)
 	}
 	return req
 }
