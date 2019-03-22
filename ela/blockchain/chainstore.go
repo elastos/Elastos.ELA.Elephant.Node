@@ -74,13 +74,13 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 		if tx.TxType == CoinBase {
 			vouts := txs[i].Outputs
 			var to []string
-			hold := make(map[string]types.TransactionHistory)
+			hold := make(map[string]uint64)
+			txhscoinbase := make([]types.TransactionHistory, 0)
 			for _, vout := range vouts {
 				address, _ := vout.ProgramHash.ToAddress()
-				if !common.Contains(address, to) {
+				if !common.ContainsString(address, to) {
 					to = append(to, address)
 					txh := types.TransactionHistory{}
-					txh.Value = uint64(vout.Value)
 					txh.Address = address
 					txh.Inputs = []string{MINING_ADDR}
 					txh.TxType = txTypeEnum[tx.TxType]
@@ -89,15 +89,17 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 					txh.CreateTime = uint64(block.Header.Timestamp)
 					txh.Type = INCOME
 					txh.Fee = 0
-					txhs = append(txhs, txh)
+					hold[address] = uint64(vout.Value)
+					txhscoinbase = append(txhscoinbase, txh)
 				} else {
-					txh := hold[address]
-					txh.Value += uint64(vout.Value)
+					hold[address] += uint64(vout.Value)
 				}
 			}
-			for _, txh := range txhs {
-				txh.Outputs = to
+			for i := 0; i < len(txhscoinbase); i++ {
+				txhscoinbase[i].Outputs = to
+				txhscoinbase[i].Value = hold[txhscoinbase[i].Address]
 			}
+			txhs = append(txhs, txhscoinbase...)
 		} else {
 			isCrossTx := false
 			if tx.TxType == TransferCrossChainAsset {
@@ -123,7 +125,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				} else {
 					spend[address] = int64(referTx.Outputs[index].Value)
 				}
-				if !common.Contains(address, from) {
+				if !common.ContainsString(address, from) {
 					from = append(from, address)
 				}
 			}
@@ -149,7 +151,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				} else {
 					receive[address] = int64(output.Value)
 				}
-				if !common.Contains(address, to) {
+				if !common.ContainsString(address, to) {
 					to = append(to, address)
 				}
 			}

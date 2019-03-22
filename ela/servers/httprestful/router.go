@@ -128,7 +128,11 @@ func getParam(r *http.Request, key string) string {
 }
 
 func getQueryParam(r *http.Request, param map[string]interface{}) {
-	for _, v := range strings.Split(r.URL.RawQuery, "&") {
+	q := strings.Split(r.URL.RawQuery, "&")
+	if len(q) == 1 && strings.Trim(q[0], "") == "" {
+		return
+	}
+	for _, v := range q {
 		a := strings.Split(v, "=")
 		param[a[0]] = a[1]
 	}

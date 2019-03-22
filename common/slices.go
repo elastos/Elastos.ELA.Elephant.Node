@@ -1,11 +1,7 @@
 package common
 
-func Contains(c interface{}, s interface{}) bool {
-	cs, ok := s.([]interface{})
-	if !ok {
-		return false
-	}
-	for _, v := range cs {
+func ContainsString(c string, s []string) bool {
+	for _, v := range s {
 		if v == c {
 			return true
 		}
