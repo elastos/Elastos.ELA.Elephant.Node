@@ -33,7 +33,6 @@ const (
 	ApiGetUTXOByAddr       = "/api/v1/asset/utxos/:addr"
 	ApiSendRawTransaction  = "/api/v1/sendtransaction"
 	ApiGetTransactionPool  = "/api/v1/transactionpool"
-	ApiRestart             = "/api/v1/restart"
 
 	//extended
 	ApiGetHistory = "/api/v1/history/:addr"
@@ -116,7 +115,6 @@ func (rt *restServer) initializeMethod() {
 		ApiGetUTXOByAsset:      {name: "getutxobyasset", handler: servers.GetUnspendOutput},
 		ApiGetBalanceByAddr:    {name: "getbalancebyaddr", handler: servers.GetBalanceByAddr},
 		ApiGetBalanceByAsset:   {name: "getbalancebyasset", handler: servers.GetBalanceByAsset},
-		ApiRestart:             {name: "restart", handler: rt.Restart},
 
 		// extended
 		ApiGetHistory: {name: "gethistory", handler: servers.GetHistory},
@@ -200,8 +198,6 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 	case ApiGetUTXOByAsset:
 		req["addr"] = getParam(r, "addr")
 		req["assetid"] = getParam(r, "assetid")
-
-	case ApiRestart:
 
 	case ApiSendRawTransaction:
 
@@ -288,15 +284,6 @@ func (rt *restServer) Stop() {
 		rt.server.Shutdown(context.Background())
 		log.Error("Close restful ")
 	}
-}
-
-func (rt *restServer) Restart(cmd servers.Params) map[string]interface{} {
-	go func() {
-		rt.Stop()
-		rt.Start()
-	}()
-
-	return servers.ResponsePack(Success, "")
 }
 
 func (rt *restServer) initTlsListen() (net.Listener, error) {

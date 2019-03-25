@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"strconv"
 
+	. "github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers"
 	. "github.com/elastos/Elastos.ELA/common/config"
 	"github.com/elastos/Elastos.ELA/common/log"
 	elaErr "github.com/elastos/Elastos.ELA/errors"
-	. "github.com/elastos/Elastos.ELA/servers"
 )
 
 //an instance of the multiplexer
@@ -35,7 +35,6 @@ func StartRPCServer() {
 
 	http.HandleFunc("/", Handle)
 
-	mainMux["setloglevel"] = SetLogLevel
 	mainMux["getinfo"] = GetInfo
 	mainMux["getblock"] = GetBlockByHash
 	mainMux["getcurrentheight"] = GetBlockHeight
@@ -53,13 +52,7 @@ func StartRPCServer() {
 	mainMux["getexistwithdrawtransactions"] = GetExistWithdrawTransactions
 	mainMux["listunspent"] = ListUnspent
 	mainMux["getreceivedbyaddress"] = GetReceivedByAddress
-	// aux interfaces
-	mainMux["help"] = AuxHelp
-	mainMux["submitauxblock"] = SubmitAuxBlock
-	mainMux["createauxblock"] = CreateAuxBlock
-	// mining interfaces
-	mainMux["togglemining"] = ToggleMining
-	mainMux["discretemining"] = DiscreteMining
+
 	// vote interfaces
 	mainMux["listproducers"] = ListProducers
 	mainMux["producerstatus"] = ProducerStatus

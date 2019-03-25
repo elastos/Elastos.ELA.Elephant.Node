@@ -7,11 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
-	"math"
-	"time"
-
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/pow"
-	aux "github.com/elastos/Elastos.ELA/auxpow"
 	chain "github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/config"
@@ -23,6 +19,7 @@ import (
 	. "github.com/elastos/Elastos.ELA/errors"
 	"github.com/elastos/Elastos.ELA/p2p/msg"
 	. "github.com/elastos/Elastos.ELA/protocol"
+	"math"
 )
 
 const (
@@ -207,124 +204,6 @@ func GetNodeState(param Params) map[string]interface{} {
 	return ResponsePack(Success, nodeState)
 }
 
-func SetLogLevel(param Params) map[string]interface{} {
-	level, ok := param.Int("level")
-	if !ok || level < 0 {
-		return ResponsePack(InvalidParams, "level must be an integer in 0-6")
-	}
-
-	log.SetPrintLevel(uint8(level))
-	return ResponsePack(Success, fmt.Sprint("log level has been set to ", level))
-}
-
-func SubmitAuxBlock(param Params) map[string]interface{} {
-	blockHashHex, ok := param.String("blockhash")
-	if !ok {
-		return ResponsePack(InvalidParams, "parameter blockhash not found")
-	}
-	auxPow, ok := param.String("auxpow")
-	if !ok {
-		return ResponsePack(InvalidParams, "parameter auxpow not found")
-	}
-
-	blockHash, err := common.Uint256FromHexString(blockHashHex)
-	if err != nil {
-		return ResponsePack(InvalidParams, "bad blockhash")
-	}
-	var msgAuxBlock *Block
-	if msgAuxBlock, ok = LocalPow.AuxBlockPool.GetBlock(*blockHash); !ok {
-		log.Debug("[json-rpc:SubmitAuxBlock] block hash unknown", blockHash)
-		return ResponsePack(InternalError, "block hash unknown")
-	}
-
-	localHeight := chain.DefaultLedger.GetLocalBlockChainHeight()
-	if localHeight >= msgAuxBlock.Height {
-		return ResponsePack(InternalError, "reject the block which have existing height")
-	}
-
-	var aux aux.AuxPow
-	buf, _ := common.HexStringToBytes(auxPow)
-	if err := aux.Deserialize(bytes.NewReader(buf)); err != nil {
-		log.Debug("[json-rpc:SubmitAuxBlock] auxpow deserialization failed", auxPow)
-		return ResponsePack(InternalError, "auxpow deserialization failed")
-	}
-
-	msgAuxBlock.Header.AuxPow = aux
-	_, _, err = chain.DefaultLedger.HeightVersions.AddDposBlock(&DposBlock{
-		BlockFlag: true,
-		Block:     msgAuxBlock,
-	})
-	if err != nil {
-		log.Debug(err)
-		return ResponsePack(InternalError, "adding block failed")
-	}
-
-	LocalPow.BroadcastBlock(msgAuxBlock)
-
-	log.Debug("AddBlock called finished and LocalPow.MsgBlock.MapNewBlock has been deleted completely")
-	log.Info(auxPow, blockHash)
-	return ResponsePack(Success, true)
-}
-
-func CreateAuxBlock(param Params) map[string]interface{} {
-	var ok bool
-	LocalPow.PayToAddr, ok = param.String("paytoaddress")
-	if !ok {
-		return ResponsePack(InvalidParams, "parameter paytoaddress not found")
-	}
-
-	if ServerNode.Height() == 0 || preChainHeight != ServerNode.Height() ||
-		time.Now().Unix()-preTime > AUXBLOCK_GENERATED_INTERVAL_SECONDS {
-
-		if preChainHeight != ServerNode.Height() {
-			// Clear old blocks since they're obsolete now.
-			currentAuxBlock = nil
-			LocalPow.AuxBlockPool.ClearBlock()
-		}
-
-		// Create new block with nonce = 0
-		auxBlock, err := LocalPow.GenerateBlock(config.Parameters.PowConfiguration.PayToAddr, chain.DefaultLedger.Blockchain.BestChain)
-		if nil != err {
-			return ResponsePack(InternalError, "generate block failed")
-		}
-
-		// Update state only when CreateNewBlock succeeded
-		preChainHeight = ServerNode.Height()
-		preTime = time.Now().Unix()
-
-		// Save
-		currentAuxBlock = auxBlock
-		LocalPow.AuxBlockPool.AppendBlock(auxBlock)
-	}
-
-	// At this point, currentAuxBlock is always initialised: If we make it here without creating
-	// a new block above, it means that, in particular, preChainHeight == ServerNode.Height().
-	// But for that to happen, we must already have created a currentAuxBlock in a previous call,
-	// as preChainHeight is initialised only when currentAuxBlock is.
-	if currentAuxBlock == nil {
-		return ResponsePack(InternalError, "no block cached")
-	}
-
-	type AuxBlock struct {
-		ChainID           int            `json:"chainid"`
-		Height            uint64         `json:"height"`
-		CoinBaseValue     common.Fixed64 `json:"coinbasevalue"`
-		Bits              string         `json:"bits"`
-		Hash              string         `json:"hash"`
-		PreviousBlockHash string         `json:"previousblockhash"`
-	}
-
-	SendToAux := AuxBlock{
-		ChainID:           aux.AuxPowChainID,
-		Height:            ServerNode.Height(),
-		CoinBaseValue:     currentAuxBlock.Transactions[0].Outputs[1].Value,
-		Bits:              fmt.Sprintf("%x", currentAuxBlock.Header.Bits),
-		Hash:              currentAuxBlock.Hash().String(),
-		PreviousBlockHash: chain.DefaultLedger.Blockchain.CurrentBlockHash().String(),
-	}
-	return ResponsePack(Success, &SendToAux)
-}
-
 func GetInfo(param Params) map[string]interface{} {
 	_, count := ServerNode.GetConnectionCount()
 	RetVal := struct {
@@ -353,55 +232,6 @@ func GetInfo(param Params) map[string]interface{} {
 		Relayfee:      0,
 		Errors:        "Tobe written"}
 	return ResponsePack(Success, &RetVal)
-}
-
-func AuxHelp(param Params) map[string]interface{} {
-
-	//TODO  and description for this rpc-interface
-	return ResponsePack(Success, "createauxblock==submitauxblock")
-}
-
-func ToggleMining(param Params) map[string]interface{} {
-	mining, ok := param.Bool("mining")
-	if !ok {
-		return ResponsePack(InvalidParams, "")
-	}
-
-	var message string
-	if mining {
-		go LocalPow.Start()
-		message = "mining started"
-	} else {
-		go LocalPow.Halt()
-		message = "mining stopped"
-	}
-
-	return ResponsePack(Success, message)
-}
-
-func DiscreteMining(param Params) map[string]interface{} {
-
-	if LocalPow == nil {
-		return ResponsePack(PowServiceNotStarted, "")
-	}
-	count, ok := param.Uint("count")
-	if !ok {
-		return ResponsePack(InvalidParams, "")
-	}
-
-	ret := make([]string, 0)
-
-	blockHashes, err := LocalPow.DiscreteMining(uint32(count))
-	if err != nil {
-		return ResponsePack(Error, err)
-	}
-
-	for _, hash := range blockHashes {
-		retStr := ToReversedString(*hash)
-		ret = append(ret, retStr)
-	}
-
-	return ResponsePack(Success, ret)
 }
 
 func GetConnectionCount(param Params) map[string]interface{} {
