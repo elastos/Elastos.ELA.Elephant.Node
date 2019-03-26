@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/pow"
+	blockchain2 "github.com/elastos/Elastos.ELA/blockchain"
 	chain "github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/config"
@@ -28,6 +29,8 @@ const (
 	MixedUTXO  utxoType = 0x00
 	VoteUTXO   utxoType = 0x01
 	NormalUTXO utxoType = 0x02
+
+	ELA_ASSETID = "a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0"
 )
 
 var ServerNode Noder
@@ -354,6 +357,103 @@ func SendRawTransaction(param Params) map[string]interface{} {
 	}
 
 	return ResponsePack(Success, ToReversedString(txn.Hash()))
+}
+
+func CreateTx(param Params) map[string]interface{} {
+	inputs, ok := param["inputs"].([]interface{})
+	if !ok {
+		return ResponsePack(InvalidParams, "Can not find inputs")
+	}
+	var utxoList [][]*blockchain2.UTXO
+	for _, v := range inputs {
+		input, ok := v.(string)
+		if !ok {
+			return ResponsePack(InvalidParams, "Not valid input value")
+		}
+		programhash, err := common.Uint168FromAddress(input)
+		if err != nil {
+			return ResponsePack(InvalidParams, "Invalid address")
+		}
+		assetIDBytes, _ := FromReversedString(ELA_ASSETID)
+		assetID, err := common.Uint256FromBytes(assetIDBytes)
+		if err != nil {
+			return ResponsePack(InvalidParams, "")
+		}
+		utxos, err := blockchain.DefaultChainStoreEx.GetUnspentFromProgramHash(*programhash, *assetID)
+		if err != nil {
+			return ResponsePack(InvalidParams, "Internal error")
+		}
+		utxoList = append(utxoList, utxos)
+	}
+	outputs, ok := param["outputs"].([]interface{})
+	if !ok {
+		return ResponsePack(InvalidParams, "Can not find outputs")
+	}
+	var smAmt int64
+	for _, v := range outputs {
+		output := v.(map[string]interface{})
+		_, ok := output["addr"].(string)
+		if !ok {
+			return ResponsePack(InvalidParams, "Can not find addr in output")
+		}
+		amt, ok := output["amt"].(float64)
+		if !ok {
+			return ResponsePack(InvalidParams, "Can not find amt in output")
+		}
+		smAmt += int64(amt)
+	}
+	paraListMap := make(map[string]interface{})
+	txList := make([]map[string]interface{}, 0)
+	txListMap := make(map[string]interface{})
+	txList = append(txList, txListMap)
+	var index = -1
+	var spendMoney int64 = 0
+	var hasEnoughFee bool = false
+	utxoInputsArray := make([]map[string]interface{}, 0)
+	for i, utxos := range utxoList {
+		addr := inputs[i].(string)
+		for j, utxo := range utxos {
+			index = j
+			spendMoney += int64(utxo.Value)
+			if spendMoney >= smAmt+int64(config.Parameters.PowConfiguration.MinTxFee) {
+				hasEnoughFee = true
+				break
+			}
+		}
+		for z := 0; z <= index; z++ {
+			utxoInputsDetail := make(map[string]interface{})
+			b, _ := FromReversedString(utxos[z].TxID.String())
+			utxoInputsDetail["txid"] = hex.EncodeToString(b)
+			utxoInputsDetail["index"] = utxos[z].Index
+			utxoInputsDetail["address"] = addr
+			utxoInputsArray = append(utxoInputsArray, utxoInputsDetail)
+		}
+		if hasEnoughFee {
+			break
+		}
+	}
+	if !hasEnoughFee {
+		return ResponsePack(InvalidParams, "Not Enough UTXO")
+	}
+	utxoOutputsArray := make([]map[string]interface{}, 0)
+	for _, v := range outputs {
+		output := v.(map[string]interface{})
+		utxoOutputsDetail := make(map[string]interface{})
+		utxoOutputsDetail["address"] = output["addr"]
+		utxoOutputsDetail["amount"] = output["amt"]
+		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+	}
+	leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee) - smAmt
+	utxoOutputsDetail := make(map[string]interface{})
+	utxoOutputsDetail["address"] = inputs[0]
+	utxoOutputsDetail["amount"] = leftMoney
+	utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+
+	paraListMap["Transactions"] = txList
+	txListMap["UTXOInputs"] = utxoInputsArray
+	txListMap["Outputs"] = utxoOutputsArray
+	txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
+	return ResponsePack(Success, paraListMap)
 }
 
 func GetBlockHeight(param Params) map[string]interface{} {

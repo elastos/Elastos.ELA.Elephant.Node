@@ -3,6 +3,10 @@ package httprestful
 import (
 	"context"
 	"errors"
+	"github.com/elastos/Elastos.ELA/common/log"
+	"gx/ipfs/QmfWqohMtbivn5NRJvtrLzCW3EU4QmoLvVNtmvo9vbdtVA/refmt/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
@@ -135,5 +139,18 @@ func getQueryParam(r *http.Request, param map[string]interface{}) {
 	for _, v := range q {
 		a := strings.Split(v, "=")
 		param[a[0]] = a[1]
+	}
+}
+
+func getReqBodyParam(r *http.Request, param map[string]interface{}) {
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Warnf("Error read request body %s", err.Error())
+		return
+	}
+	err = json.Unmarshal(b, &param)
+	if err != nil && err != io.EOF {
+		log.Warnf("request body is not a valid json  %s", err.Error())
+		return
 	}
 }

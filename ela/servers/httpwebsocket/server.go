@@ -177,17 +177,23 @@ func (server *WebSocketServer) IsValidMsg(action string, reqMsg map[string]inter
 	valid := true
 	switch action {
 	case "getblockbyheight":
-		valid = reqMsg["height"] != nil
+		_, valid = reqMsg["height"]
 	case "getblockbyhash":
-		valid = reqMsg["blockhash"] != nil
+		_, valid = reqMsg["blockhash"]
 	case "gettransaction":
-		valid = reqMsg["hash"] != nil
+		_, valid = reqMsg["hash"]
 	case "getasset":
-		valid = reqMsg["hash"] != nil
+		_, valid = reqMsg["hash"]
 	case "getunspendoutput":
-		valid = reqMsg["addr"] != nil && reqMsg["assetid"] != nil
+		_, ok1 := reqMsg["addr"]
+		_, ok2 := reqMsg["assetid"]
+		if ok1 && ok2 {
+			valid = true
+		} else {
+			valid = false
+		}
 	case "sendrawtransaction":
-		valid = reqMsg["data"] != nil
+		_, valid = reqMsg["data"]
 	}
 	return valid
 }
