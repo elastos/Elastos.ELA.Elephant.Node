@@ -1,9 +1,9 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"github.com/elastos/Elastos.ELA/common"
-	"github.com/pkg/errors"
 	"io"
 )
 

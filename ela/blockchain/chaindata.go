@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/core/types"
 	"github.com/elastos/Elastos.ELA/common"
-	"github.com/elastos/tmp/Elastos.ELA/log"
+	"github.com/elastos/Elastos.ELA/common/log"
 	"os"
 )
 

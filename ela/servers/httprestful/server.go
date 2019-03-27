@@ -38,6 +38,7 @@ const (
 	ApiGetHistory = "/api/v1/history/:addr"
 	ApiSendRawTx  = "/api/v1/sendRawTx"
 	ApiCreateTx   = "/api/v1/createTx"
+	APiCmc		  = "/api/v1/cmc"
 )
 
 type Action struct {
@@ -126,6 +127,7 @@ func (rt *restServer) initializeMethod() {
 		// extended
 		ApiSendRawTx: {name: "sendrawtx", handler: servers.SendRawTransaction},
 		ApiCreateTx:  {name: "createTx", handler: servers.CreateTx},
+		APiCmc:		  {name: "cmc",handler:servers.GetCmcPrice},
 	}
 	rt.postMap = postMethodMap
 	rt.getMap = getMethodMap
@@ -208,6 +210,8 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 		getQueryParam(r, req)
 	case ApiCreateTx:
 		getReqBodyParam(r, req)
+	case APiCmc:
+		getQueryParam(r, req)
 	}
 	return req
 }

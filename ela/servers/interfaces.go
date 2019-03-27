@@ -456,6 +456,18 @@ func CreateTx(param Params) map[string]interface{} {
 	return ResponsePack(Success, paraListMap)
 }
 
+func GetCmcPrice(param Params) map[string]interface{} {
+	limit , ok := param["limit"].(float64)
+	if !ok {
+		ResponsePack(InvalidParams, "")
+	}
+	if limit > 2000 {
+		limit = 2000
+	}
+	//TODO
+	return nil
+}
+
 func GetBlockHeight(param Params) map[string]interface{} {
 	return ResponsePack(Success, chain.DefaultLedger.Blockchain.BlockHeight)
 }
