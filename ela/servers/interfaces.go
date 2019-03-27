@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/pow"
 	blockchain2 "github.com/elastos/Elastos.ELA/blockchain"
 	chain "github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
@@ -19,6 +18,7 @@ import (
 	. "github.com/elastos/Elastos.ELA/core/types/payload"
 	. "github.com/elastos/Elastos.ELA/errors"
 	"github.com/elastos/Elastos.ELA/p2p/msg"
+	"github.com/elastos/Elastos.ELA/pow"
 	. "github.com/elastos/Elastos.ELA/protocol"
 	"math"
 )
@@ -457,7 +457,7 @@ func CreateTx(param Params) map[string]interface{} {
 }
 
 func GetCmcPrice(param Params) map[string]interface{} {
-	limit , ok := param["limit"].(float64)
+	limit, ok := param["limit"].(float64)
 	if !ok {
 		ResponsePack(InvalidParams, "")
 	}

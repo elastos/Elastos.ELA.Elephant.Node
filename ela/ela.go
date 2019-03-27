@@ -2,7 +2,6 @@ package ela
 
 import (
 	. "github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/pow"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httpjsonrpc"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httpnodeinfo"
@@ -18,6 +17,7 @@ import (
 	"github.com/elastos/Elastos.ELA/dpos"
 	"github.com/elastos/Elastos.ELA/dpos/store"
 	"github.com/elastos/Elastos.ELA/node"
+	"github.com/elastos/Elastos.ELA/pow"
 	"github.com/elastos/Elastos.ELA/protocol"
 	"github.com/elastos/Elastos.ELA/version/verconfig"
 	"os"

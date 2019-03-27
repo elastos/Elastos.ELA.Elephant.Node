@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
 	"net"
 	"net/http"
 	"strconv"
@@ -260,7 +261,8 @@ func SendBlock2WSclient(v interface{}) {
 	//}
 	b, ok := v.(*Block)
 	if ok {
-		log.Infof("WS:block height:%d", b.Height)
+		log.Infof("WS Receiving Block :%d", b.Height)
+		blockchain.DefaultChainStoreEx.AddTask(b)
 	}
 	if PushRawBlockFlag {
 		go func() {
