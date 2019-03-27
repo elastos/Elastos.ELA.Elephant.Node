@@ -22,7 +22,7 @@ const (
 	ELA         uint64 = 100000000
 )
 
-var txTypeEnum = map[TransactionType]string{
+var txTypeEnum = map[TxType]string{
 	CoinBase:                "CoinBase",
 	RegisterAsset:           "RegisterAsset",
 	TransferAsset:           "TransferAsset",
@@ -134,9 +134,9 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 			for _, output := range tx.Outputs {
 				address, _ := output.ProgramHash.ToAddress()
 				var valueCross int64
-				if isCrossTx == true && (address == MINING_ADDR || strings.Index(address, "X") == 0) {
+				if isCrossTx == true && (address == MINING_ADDR || strings.Index(address, "X") == 0 || address == "4oLvT2") {
 					switch pl := tx.Payload.(type) {
-					case *payload.PayloadTransferCrossChainAsset:
+					case *payload.TransferCrossChainAsset:
 						valueCross = int64(pl.CrossChainAmounts[0])
 					}
 				}

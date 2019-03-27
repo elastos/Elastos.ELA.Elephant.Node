@@ -12,7 +12,7 @@ import (
 	"strconv"
 
 	. "github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers"
-	. "github.com/elastos/Elastos.ELA/common/config"
+	"github.com/elastos/Elastos.ELA/common/config"
 	"github.com/elastos/Elastos.ELA/common/log"
 	elaErr "github.com/elastos/Elastos.ELA/errors"
 )
@@ -60,7 +60,7 @@ func StartRPCServer() {
 	mainMux["estimatesmartfee"] = EstimateSmartFee
 	mainMux["getdepositcoin"] = GetDepositCoin
 
-	err := http.ListenAndServe(":"+strconv.Itoa(Parameters.HttpJsonPort), nil)
+	err := http.ListenAndServe(":"+strconv.Itoa(config.Parameters.HttpJsonPort), nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err.Error())
 	}
@@ -117,9 +117,9 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestParams := request["params"]
-	// Json rpc 1.0 support positional parameters while json rpc 2.0 support named parameters.
-	// positional parameters: { "requestParams":[1, 2, 3....] }
-	// named parameters: { "requestParams":{ "a":1, "b":2, "c":3 } }
+	// Json rpc 1.0 support positional config.Parameters while json rpc 2.0 support named config.Parameters.
+	// positional config.Parameters: { "requestParams":[1, 2, 3....] }
+	// named config.Parameters: { "requestParams":{ "a":1, "b":2, "c":3 } }
 	// Here we support both of them.
 	var params Params
 	switch requestParams := requestParams.(type) {
@@ -161,7 +161,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 func clientAllowed(req *http.Request) bool {
 	log.Debugf("RemoteAddr %s \n", req.RemoteAddr)
-	log.Debugf("WhiteIPList %v \n", Parameters.RpcConfiguration.WhiteIPList)
+	log.Debugf("WhiteIPList %v \n", config.Parameters.RpcConfiguration.WhiteIPList)
 
 	//this ipAbbr  may be  ::1 when request is localhost
 	ipAbbr, _, err := net.SplitHostPort(req.RemoteAddr)
@@ -184,7 +184,7 @@ func clientAllowed(req *http.Request) bool {
 		return true
 	}
 
-	for _, cfgIp := range Parameters.RpcConfiguration.WhiteIPList {
+	for _, cfgIp := range config.Parameters.RpcConfiguration.WhiteIPList {
 		//WhiteIPList have 0.0.0.0  allow all ip in
 		if cfgIp == "0.0.0.0" {
 			return true
@@ -200,9 +200,9 @@ func clientAllowed(req *http.Request) bool {
 
 func checkAuth(r *http.Request) (bool, error) {
 
-	log.Debugf("checkAuth PowConfiguration %+v", Parameters.RpcConfiguration)
+	log.Debugf("checkAuth PowConfiguration %+v", config.Parameters.RpcConfiguration)
 
-	if (Parameters.RpcConfiguration.User == Parameters.RpcConfiguration.Pass) && (len(Parameters.RpcConfiguration.User) == 0) {
+	if (config.Parameters.RpcConfiguration.User == config.Parameters.RpcConfiguration.Pass) && (len(config.Parameters.RpcConfiguration.User) == 0) {
 		return true, nil
 	}
 	authHeader := r.Header["Authorization"]
@@ -213,7 +213,7 @@ func checkAuth(r *http.Request) (bool, error) {
 
 	authSha256 := sha256.Sum256([]byte(authHeader[0]))
 
-	login := Parameters.RpcConfiguration.User + ":" + Parameters.RpcConfiguration.Pass
+	login := config.Parameters.RpcConfiguration.User + ":" + config.Parameters.RpcConfiguration.Pass
 	auth := "Basic " + base64.StdEncoding.EncodeToString([]byte(login))
 	cfgAuthSha256 := sha256.Sum256([]byte(auth))
 
