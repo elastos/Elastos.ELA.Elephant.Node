@@ -2,9 +2,9 @@ package httprestful
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/elastos/Elastos.ELA/common/log"
-	"gx/ipfs/QmfWqohMtbivn5NRJvtrLzCW3EU4QmoLvVNtmvo9vbdtVA/refmt/json"
 	"io"
 	"io/ioutil"
 	"net/http"
