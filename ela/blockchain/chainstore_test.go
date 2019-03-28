@@ -63,7 +63,7 @@ func Test_GetTxHistory(t *testing.T) {
 		0x14, 0x4d, 0xf8, 0x22, 0xb7, 0xd9, 0x24,
 		0x6c, 0x58, 0xdf, 0x68, 0xeb, 0x11, 0xce,
 	})
-	chainStore, err := blockchain.NewChainStore("elastos/data/chain",genesisBlock)
+	chainStore, err := blockchain.NewChainStore("elastos/data/chain", genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func Test_GetCmcPrice(t *testing.T) {
 		0x14, 0x4d, 0xf8, 0x22, 0xb7, 0xd9, 0x24,
 		0x6c, 0x58, 0xdf, 0x68, 0xeb, 0x11, 0xce,
 	})
-	chainStore, err := blockchain.NewChainStore("elastos/data/chain",genesisBlock)
+	chainStore, err := blockchain.NewChainStore("elastos/data/chain", genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func Test_GetCmcPrice(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := chainStoreEx.GetCmcPrice()
-	t.Logf("%v",result)
+	t.Logf("%v", result)
 }
 
 func Test_TxCmcWithBareLeverDb(t *testing.T) {
@@ -109,7 +109,7 @@ func Test_TxCmcWithBareLeverDb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	buf , err := st.Get(key.Bytes())
+	buf, err := st.Get(key.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}

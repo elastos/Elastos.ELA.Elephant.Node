@@ -33,18 +33,12 @@ import (
 )
 
 var (
-	// Build version generated when build program.
-	Version string
-
-	// The go source code version at build.
-	GoVersion string
-
 	// printStateInterval is the interval to print out peer-to-peer network
 	// state.
 	printStateInterval = time.Minute
 )
 
-func Go() {
+func Go(Version, GoVersion string) {
 	// Use all processor cores.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 

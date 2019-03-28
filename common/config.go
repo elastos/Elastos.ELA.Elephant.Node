@@ -11,8 +11,8 @@ type config struct {
 }
 
 type Cmc struct {
-	ApiKey    []string
-	Inteval   string
+	ApiKey  []string
+	Inteval string
 }
 
 var Conf *config

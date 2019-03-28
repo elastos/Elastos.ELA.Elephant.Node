@@ -270,7 +270,7 @@ func (c ChainStoreExtend) GetCmcPrice() types.Cmcs {
 	key.WriteByte(byte(DataCmcPrefix))
 	common2.WriteVarString(key, "CMC")
 	cmcs := types.Cmcs{}
-	buf , err := c.Get(key.Bytes())
+	buf, err := c.Get(key.Bytes())
 	if err != nil {
 		log.Warn("Can not get Cmc Price data")
 		return cmcs

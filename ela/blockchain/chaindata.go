@@ -174,7 +174,7 @@ func (c ChainStoreExtend) persistCmc(cmc types.Cmcs) error {
 	println("Persist CMC")
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataCmcPrefix))
-	common.WriteVarString(key,"CMC")
+	common.WriteVarString(key, "CMC")
 	value := new(bytes.Buffer)
 	cmc.Serialize(value)
 	c.BatchPut(key.Bytes(), value.Bytes())

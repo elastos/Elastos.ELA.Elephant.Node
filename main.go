@@ -5,9 +5,17 @@ import (
 	"github.com/elastos/Elastos.ELA.Utility/signal"
 )
 
+var (
+	// Build version generated when build program.
+	Version string
+
+	// The go source code version at build.
+	GoVersion string
+)
+
 func main() {
 	var interrupt = signal.NewInterrupt()
-	go ela.Go()
+	go ela.Go(Version, GoVersion)
 	//go id.Go()
 	<-interrupt.C
 }

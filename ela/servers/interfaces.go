@@ -1523,8 +1523,8 @@ func GetCmcPrice(param Params) map[string]interface{} {
 	var err error
 	if !ok {
 		l = 2000
-	}else{
-		l , err = strconv.Atoi(limit)
+	} else {
+		l, err = strconv.Atoi(limit)
 		if err != nil {
 			return ResponsePack(InvalidParams, "")
 		}
@@ -1537,7 +1537,7 @@ func GetCmcPrice(param Params) map[string]interface{} {
 		return ResponsePack(Error, " Cmc Price is not ready yet")
 	}
 	cmcs = types.Cmcs{
-		C:cmcs.C[: int64(l)],
+		C: cmcs.C[:int64(l)],
 	}
-	return ResponsePack(Success,cmcs.C)
+	return ResponsePack(Success, cmcs.C)
 }
