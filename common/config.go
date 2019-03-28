@@ -13,7 +13,6 @@ type config struct {
 type Cmc struct {
 	ApiKey    []string
 	Inteval   string
-	NumOfCoin int
 }
 
 var Conf *config

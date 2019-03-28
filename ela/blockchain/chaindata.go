@@ -66,10 +66,10 @@ func (c ChainStoreExtend) doPersistTransactionHistory(history types.TransactionH
 }
 
 func (c ChainStoreExtend) initCmc() {
-	println("@every " + common2.Conf.Cmc.Inteval)
 	c.AddFunc("@every "+common2.Conf.Cmc.Inteval, c.renewCmcPrice)
 	c.Start()
 }
+
 func (c *ChainStoreExtend) renewCmcPrice() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -171,9 +171,10 @@ func (c ChainStoreExtend) saveToDb(cmcResponseUSD, cmcResponseCNY, cmcResponseBT
 }
 
 func (c ChainStoreExtend) persistCmc(cmc types.Cmcs) error {
+	println("Persist CMC")
 	key := new(bytes.Buffer)
-	key.WriteByte(byte(DataTxHistoryPrefix))
-	key.WriteString("CMC")
+	key.WriteByte(byte(DataCmcPrefix))
+	common.WriteVarString(key,"CMC")
 	value := new(bytes.Buffer)
 	cmc.Serialize(value)
 	c.BatchPut(key.Bytes(), value.Bytes())
@@ -297,12 +298,11 @@ func fetchBGXPrice() (types.CmcResponse, error) {
 }
 
 func fetchPrice(i int, curr string) (types.CmcResponse, error) {
-	url := fmt.Sprintf(types.CMC_ENDPOINT_URL, common2.Conf.Cmc.NumOfCoin, curr)
+	url := fmt.Sprintf(types.CMC_ENDPOINT_URL, 2000, curr)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return types.CmcResponse{}, err
 	}
-	println(common2.Conf.Cmc.ApiKey[i])
 	req.Header = map[string][]string{
 		"X-CMC_PRO_API_KEY": []string{common2.Conf.Cmc.ApiKey[i]},
 	}

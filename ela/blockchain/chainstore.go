@@ -264,3 +264,19 @@ func (c ChainStoreExtend) GetTxHistoryByPage(addr string, pageNum, pageSize uint
 	from := (pageNum - 1) * pageSize
 	return txhs.Filter(from, pageSize)
 }
+
+func (c ChainStoreExtend) GetCmcPrice() types.Cmcs {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataCmcPrefix))
+	common2.WriteVarString(key, "CMC")
+	cmcs := types.Cmcs{}
+	buf , err := c.Get(key.Bytes())
+	if err != nil {
+		log.Warn("Can not get Cmc Price data")
+		return cmcs
+	}
+	val := new(bytes.Buffer)
+	val.Write(buf)
+	cmcs.Deserialize(val)
+	return cmcs
+}

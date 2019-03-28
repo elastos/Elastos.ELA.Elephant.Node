@@ -67,26 +67,26 @@ type Cmc struct {
 	Volume_btc             string `json:"24h_volume_btc"`
 	Volume_cny             string `json:"24h_volume_cny"`
 	Volume_usd             string `json:"24h_volume_usd"`
-	Available_supply       string
-	Id                     string
-	Last_updated           string
-	Market_cap_btc         string
-	Market_cap_cny         string
-	Market_cap_usd         string
-	Max_supply             string
-	Name                   string
-	Num_market_pairs       string
-	Percent_change_1h      string
-	Percent_change_24h     string
-	Percent_change_7d      string
-	Platform_symbol        string
-	Platform_token_address string
-	Price_btc              string
-	Price_cny              string
-	Price_usd              string
-	Rank                   string
-	Symbol                 string
-	Total_supply           string
+	Available_supply       string `json:"available_supply"`
+	Id                     string `json:"id"`
+	Last_updated           string `json:"last_updated"`
+	Market_cap_btc         string `json:"market_cap_btc"`
+	Market_cap_cny         string `json:"market_cap_cny"`
+	Market_cap_usd         string `json:"market_cap_usd"`
+	Max_supply             string `json:"max_supply"`
+	Name                   string `json:"name"`
+	Num_market_pairs       string `json:"num_market_pairs"`
+	Percent_change_1h      string `json:"percent_change_1h"`
+	Percent_change_24h     string `json:"percent_change_24h"`
+	Percent_change_7d      string `json:"percent_change_7d"`
+	Platform_symbol        string `json:"platform_symbol"`
+	Platform_token_address string `json:"platform_token_address"`
+	Price_btc              string `json:"price_btc"`
+	Price_cny              string `json:"price_cny"`
+	Price_usd              string `json:"price_usd"`
+	Rank                   string `json:"rank"`
+	Symbol                 string `json:"symbol"`
+	Total_supply           string `json:"total_supply"`
 }
 
 type Cmcs struct {

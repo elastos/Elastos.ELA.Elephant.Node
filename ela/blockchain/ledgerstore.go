@@ -15,4 +15,5 @@ type IChainStoreExtend interface {
 	AddTask(task interface{})
 	GetTxHistory(addr string) types.TransactionHistorySorter
 	GetTxHistoryByPage(addr string, pageNum, pageSize uint32) types.TransactionHistorySorter
+	GetCmcPrice() types.Cmcs
 }

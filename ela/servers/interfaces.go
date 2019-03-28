@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/core/types"
 	"math"
 	"sort"
+	"strconv"
 
 	aux "github.com/elastos/Elastos.ELA/auxpow"
 	"github.com/elastos/Elastos.ELA/blockchain"
@@ -1516,13 +1518,26 @@ func CreateTx(param Params) map[string]interface{} {
 }
 
 func GetCmcPrice(param Params) map[string]interface{} {
-	limit, ok := param["limit"].(float64)
+	limit, ok := param["limit"].(string)
+	l := 0
+	var err error
 	if !ok {
-		ResponsePack(InvalidParams, "")
+		l = 2000
+	}else{
+		l , err = strconv.Atoi(limit)
+		if err != nil {
+			return ResponsePack(InvalidParams, "")
+		}
+		if l > 2000 || l <= 0 {
+			l = 2000
+		}
 	}
-	if limit > 2000 {
-		limit = 2000
+	cmcs := blockchain2.DefaultChainStoreEx.GetCmcPrice()
+	if len(cmcs.C) < l {
+		return ResponsePack(Error, " Cmc Price is not ready yet")
 	}
-	//TODO
-	return nil
+	cmcs = types.Cmcs{
+		C:cmcs.C[: int64(l)],
+	}
+	return ResponsePack(Success,cmcs.C)
 }

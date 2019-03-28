@@ -120,6 +120,7 @@ func (rt *restServer) initializeMethod() {
 
 		// extended
 		ApiGetHistory: {name: "gethistory", handler: servers.GetHistory},
+		APiCmc:       {name: "cmc", handler: servers.GetCmcPrice},
 	}
 
 	postMethodMap := map[string]Action{
@@ -127,7 +128,6 @@ func (rt *restServer) initializeMethod() {
 		// extended
 		ApiSendRawTx: {name: "sendrawtx", handler: servers.SendRawTransaction},
 		ApiCreateTx:  {name: "createTx", handler: servers.CreateTx},
-		APiCmc:       {name: "cmc", handler: servers.GetCmcPrice},
 	}
 	rt.postMap = postMethodMap
 	rt.getMap = getMethodMap

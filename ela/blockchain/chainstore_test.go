@@ -5,6 +5,7 @@ import (
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/core/types"
 	"github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
+	"github.com/elastos/Elastos.ELA/common/config"
 	"testing"
 )
 
@@ -57,7 +58,12 @@ func Test_TxHistoryIterator(t *testing.T) {
 
 func Test_GetTxHistory(t *testing.T) {
 
-	chainStore, err := blockchain.NewChainStore("elastos/data/chain")
+	genesisBlock := config.GenesisBlock(&common.Uint168{
+		0x12, 0xc8, 0xa2, 0xe0, 0x67, 0x72, 0x27,
+		0x14, 0x4d, 0xf8, 0x22, 0xb7, 0xd9, 0x24,
+		0x6c, 0x58, 0xdf, 0x68, 0xeb, 0x11, 0xce,
+	})
+	chainStore, err := blockchain.NewChainStore("elastos/data/chain",genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,4 +76,46 @@ func Test_GetTxHistory(t *testing.T) {
 	for _, v := range result {
 		t.Log(v)
 	}
+}
+
+func Test_GetCmcPrice(t *testing.T) {
+
+	genesisBlock := config.GenesisBlock(&common.Uint168{
+		0x12, 0xc8, 0xa2, 0xe0, 0x67, 0x72, 0x27,
+		0x14, 0x4d, 0xf8, 0x22, 0xb7, 0xd9, 0x24,
+		0x6c, 0x58, 0xdf, 0x68, 0xeb, 0x11, 0xce,
+	})
+	chainStore, err := blockchain.NewChainStore("elastos/data/chain",genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer chainStore.Close()
+	chainStoreEx, err := NewChainStoreEx(chainStore, "elastos/data/ext")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := chainStoreEx.GetCmcPrice()
+	t.Logf("%v",result)
+}
+
+func Test_TxCmcWithBareLeverDb(t *testing.T) {
+	st, err := blockchain.NewLevelDB("elastos/data/ext")
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataCmcPrefix))
+	err = common.WriteVarString(key, "CMC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	buf , err := st.Get(key.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	val := new(bytes.Buffer)
+	val.Write(buf)
+	cmcs := types.Cmcs{}
+	cmcs.Deserialize(val)
+	t.Logf("Name : %s , Price USD : %s", cmcs.C[0].Name, cmcs.C[0].Price_usd)
 }
