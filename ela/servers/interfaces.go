@@ -315,7 +315,7 @@ func GetDPOSPeersInfo(params Params) map[string]interface{} {
 		ConnState      string `json:"connstate"`
 	}
 
-	peers := Arbiter.GetDPOSPeersInfo()
+	peers := Arbiter.GetArbiterPeersInfo()
 
 	result := make([]peerInfo, 0)
 	for _, p := range peers {

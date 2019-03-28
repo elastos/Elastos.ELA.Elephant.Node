@@ -9,6 +9,7 @@ import (
 	"github.com/elastos/Elastos.ELA/common/log"
 	. "github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
+	"github.com/robfig/cron"
 	"sort"
 	"strings"
 	"sync"
@@ -40,6 +41,7 @@ type ChainStoreExtend struct {
 	taskChEx chan interface{}
 	quitEx   chan chan bool
 	mu       sync.Mutex
+	*cron.Cron
 }
 
 func (c ChainStoreExtend) AddTask(task interface{}) {
@@ -56,9 +58,12 @@ func NewChainStoreEx(chainstore IChainStore, filePath string) (ChainStoreExtend,
 		IStore:      st,
 		taskChEx:    make(chan interface{}, TaskChanCap),
 		quitEx:      make(chan chan bool, 1),
+		Cron:        cron.New(),
+		mu:          sync.Mutex{},
 	}
 	DefaultChainStoreEx = c
 	go c.loop()
+	go c.initCmc()
 	return c, nil
 }
 
@@ -213,6 +218,8 @@ func (c ChainStoreExtend) CloseEx() {
 	closed := make(chan bool)
 	c.quitEx <- closed
 	<-closed
+	c.Stop()
+	println("stop")
 }
 
 func (c ChainStoreExtend) loop() {

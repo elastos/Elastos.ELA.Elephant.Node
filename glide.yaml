@@ -37,3 +37,4 @@ import:
 - package: github.com/golang/snappy
 - package: github.com/robfig/cron.git
 - package: gopkg.in/cheggaaa/pb.v1
+- package: github.com/robfig/cron
