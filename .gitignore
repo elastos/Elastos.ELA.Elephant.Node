@@ -7,3 +7,5 @@ elastos_did/
 /tmp
 elephant
 nohup.out
+**/_build
+**/_static
