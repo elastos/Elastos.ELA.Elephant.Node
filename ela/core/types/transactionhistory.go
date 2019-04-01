@@ -21,6 +21,11 @@ type TransactionHistory struct {
 	Memo       string
 }
 
+type ThResult struct {
+	History  TransactionHistorySorter
+	TotalNum int
+}
+
 func (th *TransactionHistory) Serialize(w io.Writer) error {
 	err := common.WriteVarString(w, th.Address)
 	if err != nil {

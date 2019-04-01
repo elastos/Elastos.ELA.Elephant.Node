@@ -259,10 +259,10 @@ func (c ChainStoreExtend) GetTxHistory(addr string) types.TransactionHistorySort
 	return txhs
 }
 
-func (c ChainStoreExtend) GetTxHistoryByPage(addr string, pageNum, pageSize uint32) types.TransactionHistorySorter {
+func (c ChainStoreExtend) GetTxHistoryByPage(addr string, pageNum, pageSize uint32) (types.TransactionHistorySorter, int) {
 	txhs := c.GetTxHistory(addr)
 	from := (pageNum - 1) * pageSize
-	return txhs.Filter(from, pageSize)
+	return txhs.Filter(from, pageSize), txhs.Len()
 }
 
 func (c ChainStoreExtend) GetCmcPrice() types.Cmcs {

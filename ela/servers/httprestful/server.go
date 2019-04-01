@@ -125,7 +125,7 @@ func (rt *restServer) initializeMethod() {
 	postMethodMap := map[string]Action{
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
 		// extended
-		ApiCreateTx:  {name: "createTx", handler: servers.CreateTx},
+		ApiCreateTx: {name: "createTx", handler: servers.CreateTx},
 	}
 	rt.postMap = postMethodMap
 	rt.getMap = getMethodMap

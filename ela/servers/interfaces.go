@@ -1404,7 +1404,11 @@ func GetHistory(param Params) map[string]interface{} {
 	ok1 := param.HasKey("pageSize")
 	if !ok && !ok1 {
 		txhs := blockchain2.DefaultChainStoreEx.GetTxHistory(addr)
-		return ResponsePack(Success, txhs)
+		thr := types.ThResult{
+			History:  txhs,
+			TotalNum: txhs.Len(),
+		}
+		return ResponsePack(Success, thr)
 	} else if ok && ok1 {
 		pageNum, cool := param.Uint("pageNum")
 		if !cool {
@@ -1414,8 +1418,12 @@ func GetHistory(param Params) map[string]interface{} {
 		if !cool {
 			return ResponsePack(InvalidParams, "")
 		}
-		txhs := blockchain2.DefaultChainStoreEx.GetTxHistoryByPage(addr, pageNum, pageSize)
-		return ResponsePack(Success, txhs)
+		txhs, total := blockchain2.DefaultChainStoreEx.GetTxHistoryByPage(addr, pageNum, pageSize)
+		thr := types.ThResult{
+			History:  txhs,
+			TotalNum: total,
+		}
+		return ResponsePack(Success, thr)
 	}
 	return ResponsePack(InvalidParams, "")
 }
