@@ -56,6 +56,7 @@ Install Glide, Glide is a package manager for Golang. We use Glide to install de
     $ cd ~/dev
     $ curl https://glide.sh/get | sh
 
+
 Configure the Elastos.ELA::
 
     {
@@ -98,13 +99,14 @@ Configure the Elastos.ELA::
 Extra feature configure::
 
     {
+      //Get CMC Apikey go to https://coinmarketcap.com/api/
       "Cmc":{
         "ApiKey":["5c8bcab7-a811-428d-9c2b-3f0326de4f66","237bd580-3c68-42f8-b9e8-fd201c4933ac"],
         "Inteval":"15m"
       }
     }
 
-.. note::
+.. warn::
     At the moment, elephant node only fire a Elastos.ELA node.
 
 Build the node
