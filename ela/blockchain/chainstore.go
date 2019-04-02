@@ -76,6 +76,10 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 	txhs := make([]types.TransactionHistory, 0)
 	for i := 0; i < len(txs); i++ {
 		tx := txs[i]
+		var memo string
+		if len(tx.Attributes) > 0 {
+			memo = string(tx.Attributes[0].Data)
+		}
 		if tx.TxType == CoinBase {
 			vouts := txs[i].Outputs
 			var to []string
@@ -94,6 +98,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 					txh.CreateTime = uint64(block.Header.Timestamp)
 					txh.Type = INCOME
 					txh.Fee = 0
+					txh.Memo = memo
 					hold[address] = uint64(vout.Value)
 					txhscoinbase = append(txhscoinbase, txh)
 				} else {
@@ -191,6 +196,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				txh.Type = transferType
 				txh.Fee = realFee
 				txh.Outputs = to
+				txh.Memo = memo
 				txhs = append(txhs, txh)
 			}
 
@@ -206,6 +212,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				txh.Type = SPEND
 				txh.Fee = uint64(fee)
 				txh.Outputs = to
+				txh.Memo = memo
 				txhs = append(txhs, txh)
 			}
 		}
