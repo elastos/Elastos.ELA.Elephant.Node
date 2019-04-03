@@ -24,9 +24,9 @@ Install Git::
 
     brew install git
 
-Install Go distribution 1.9 , Use Homebrew to install Golang 1.9::
+Install Go distribution 1.10 , Use Homebrew to install Golang 1.10::
 
-    $ brew install go@1.9
+    $ brew install go@1.10
 
 Install Glide,Glide is a package manager for Golang. We use Glide to install dependent packages::
 
@@ -44,12 +44,12 @@ Install git::
 
     $ sudo apt-get install -y git
 
-Install Go distribution 1.9::
+Install Go distribution 1.10::
 
     $ sudo apt-get install -y software-properties-common
     $ sudo add-apt-repository -y ppa:gophers/archive
     $ sudo apt update
-    $ sudo apt-get install -y golang-1.9-go
+    $ sudo apt-get install -y golang-1.10-go
 
 Install Glide, Glide is a package manager for Golang. We use Glide to install dependent packages::
 
@@ -119,7 +119,7 @@ Setup basic workspace,In this instruction we use ~/dev/src/github.com/elastos as
 
 Set correct environment variables::
 
-    export GOROOT=/usr/local/opt/go@1.9/libexec
+    export GOROOT=/usr/local/opt/go@1.10/libexec
     export GOPATH=$HOME/dev
     export GOBIN=$GOPATH/bin
     export PATH=$GOROOT/bin:$PATH
@@ -128,7 +128,7 @@ Set correct environment variables::
 Check Go version and glide version,Check the golang and glider version. Make sure they are the following version number or above::
 
     $ go version
-    go version go1.9.2 darwin/amd64
+    go version go1.10.2 darwin/amd64
 
     $ glide --version
     glide version 0.13.1
