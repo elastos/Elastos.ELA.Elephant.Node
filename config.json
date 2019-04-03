@@ -14,10 +14,10 @@
       "MinTxFee": 100
     },
     "RpcConfiguration": {
-      "User": "ElaUser",
-      "Pass": "Ela123",
+      "User": "",
+      "Pass": "",
       "WhiteIPList": [
-        "127.0.0.1"
+        "0.0.0.0"
       ]
     }
   }

@@ -13,13 +13,13 @@ This is the restful api of Elastos main chain.
 Get Connection count of current Node
 ------------------------------------------------
 
-.. http:get:: /api/v1/node/connectioncount
+.. http:get:: /api/v2/node/connectioncount
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/node/connectioncount HTTP/1.1
+      GET /api/v2/node/connectioncount HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -73,13 +73,13 @@ Get Connection count of current Node
 Returns status of the node
 ------------------------------------------------
 
-.. http:get:: /api/v1/node/state
+.. http:get:: /api/v2/node/state
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/node/state HTTP/1.1
+      GET /api/v2/node/state HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -196,13 +196,13 @@ Returns status of the node
 Get all txids of specific height
 ------------------------------------------------
 
-.. http:get:: /api/v1/block/transactions/height/(int:`height`)
+.. http:get:: /api/v2/block/transactions/height/(int:`height`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/block/transactions/height/10 HTTP/1.1
+      GET /api/v2/block/transactions/height/10 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -227,13 +227,13 @@ Get all txids of specific height
 Get block detail of specific height
 ------------------------------------------------
 
-.. http:get:: /api/v1/block/details/height/(int:`height`)
+.. http:get:: /api/v2/block/details/height/(int:`height`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/block/details/height/10 HTTP/1.1
+      GET /api/v2/block/details/height/10 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -328,13 +328,13 @@ Get block detail of specific height
 Get block detail of specific block hash
 ------------------------------------------------
 
-.. http:get:: /api/v1/block/details/hash/(string:`hash`)
+.. http:get:: /api/v2/block/details/hash/(string:`hash`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/block/details/hash/1166ae059fd6914a44edde9aa8a2765138da0ab868ddaeb51d20d21908c488da HTTP/1.1
+      GET /api/v2/block/details/hash/1166ae059fd6914a44edde9aa8a2765138da0ab868ddaeb51d20d21908c488da HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -377,13 +377,13 @@ Get block detail of specific block hash
 Get current block height
 ------------------------------------------------
 
-.. http:get:: /api/v1/block/height
+.. http:get:: /api/v2/block/height
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/block/height HTTP/1.1
+      GET /api/v2/block/height HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -402,13 +402,13 @@ Get current block height
 Get block hash of specific height
 ------------------------------------------------
 
-.. http:get:: /api/v1/block/hash/(int:`height`)
+.. http:get:: /api/v2/block/hash/(int:`height`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/block/hash/10 HTTP/1.1
+      GET /api/v2/block/hash/10 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -427,13 +427,13 @@ Get block hash of specific height
 Get transaction by txid
 ------------------------------------------------
 
-.. http:get:: /api/v1/transaction/(string:`hash`)
+.. http:get:: /api/v2/transaction/(string:`hash`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/transaction/4c36a7201db86d652fdaebfebe9052de2face110e14be2e7851b55c51e0fbf8a HTTP/1.1
+      GET /api/v2/transaction/4c36a7201db86d652fdaebfebe9052de2face110e14be2e7851b55c51e0fbf8a HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -517,13 +517,13 @@ Get transaction by txid
 Get asset info of specific assetId
 ------------------------------------------------
 
-.. http:get:: /api/v1/asset/(string:`hash`)
+.. http:get:: /api/v2/asset/(string:`hash`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/asset/a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0 HTTP/1.1
+      GET /api/v2/asset/a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -548,13 +548,13 @@ Get asset info of specific assetId
 Get ELA asset balance
 ------------------------------------------------
 
-.. http:get:: /api/v1/asset/balances/(string:`addr`)
+.. http:get:: /api/v2/asset/balances/(string:`addr`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/asset/balances/EbxU18T3M9ufnrkRY7NLt6sKyckDW4VAsA HTTP/1.1
+      GET /api/v2/asset/balances/EbxU18T3M9ufnrkRY7NLt6sKyckDW4VAsA HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -573,13 +573,13 @@ Get ELA asset balance
 Get address balance of specific asset
 ------------------------------------------------
 
-.. http:get:: /api/v1/asset/balance/(string:`addr`)/(string:`assetid`)
+.. http:get:: /api/v2/asset/balance/(string:`addr`)/(string:`assetid`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/asset/balance/EbxU18T3M9ufnrkRY7NLt6sKyckDW4VAsA/a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0 HTTP/1.1
+      GET /api/v2/asset/balance/EbxU18T3M9ufnrkRY7NLt6sKyckDW4VAsA/a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -598,13 +598,13 @@ Get address balance of specific asset
 Get ELA asset UTXO of specific address
 ------------------------------------------------
 
-.. http:get:: /api/v1/asset/utxos/(string:`addr`)
+.. http:get:: /api/v2/asset/utxos/(string:`addr`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/asset/utxos/EbxU18T3M9ufnrkRY7NLt6sKyckDW4VAsA HTTP/1.1
+      GET /api/v2/asset/utxos/EbxU18T3M9ufnrkRY7NLt6sKyckDW4VAsA HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -635,13 +635,13 @@ Get ELA asset UTXO of specific address
 Get transaction pool data
 ------------------------------------------------
 
-.. http:get:: /api/v1/transactionpool
+.. http:get:: /api/v2/transactionpool
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/transactionpool HTTP/1.1
+      GET /api/v2/transactionpool HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -771,13 +771,13 @@ Get transaction pool data
 Send Transaction
 ------------------------------------------------
 
-.. http:post:: /api/v1/sendtransaction
+.. http:post:: /api/v2/sendtransaction
 
    **Example request**:
 
    .. sourcecode:: http
 
-    POST /api/v1/sendtransaction HTTP/1.1
+    POST /api/v2/sendtransaction HTTP/1.1
     Host: localhost
 
       {
@@ -800,13 +800,13 @@ Send Transaction
 Get transaction history
 ------------------------------------------------
 
-.. http:get:: /api/v1/history/(string:`addr`)?pageSize=(int:`pageSize`)&pageNum=(int:`pageNum`)
+.. http:get:: /api/v2/history/(string:`addr`)?pageSize=(int:`pageSize`)&pageNum=(int:`pageNum`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/v1/history/ HTTP/1.1
+      GET /api/v2/history/ HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -1100,13 +1100,13 @@ Get transaction history
 Calculate UTXO that is about to spend
 ------------------------------------------------
 
-.. http:get:: /api/v1/createTx
+.. http:get:: /api/v2/createtransaction
 
    **Example request**:
 
    .. sourcecode:: http
 
-      POST /api/v1/createTx HTTP/1.1
+      POST /api/v2/createtransaction HTTP/1.1
       Host: localhost
 
         {
@@ -1161,13 +1161,13 @@ Calculate UTXO that is about to spend
 Get coinmarketcap price
 ------------------------------------------------
 
-.. http:get:: /api/v1/cmc
+.. http:get:: /api/v2/cmc
 
    **Example request**:
 
    .. sourcecode:: http
 
-      get /api/v1/cmc?limit=10 HTTP/1.1
+      get /api/v2/cmc?limit=10 HTTP/1.1
       Host: localhost
 
    **Example response**:

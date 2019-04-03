@@ -18,26 +18,26 @@ import (
 )
 
 const (
-	ApiGetConnectionCount  = "/api/v1/node/connectioncount"
-	ApiGetNodeState        = "/api/v1/node/state"
-	ApiGetBlockTxsByHeight = "/api/v1/block/transactions/height/:height"
-	ApiGetBlockByHeight    = "/api/v1/block/details/height/:height"
-	ApiGetBlockByHash      = "/api/v1/block/details/hash/:hash"
-	ApiGetBlockHeight      = "/api/v1/block/height"
-	ApiGetBlockHash        = "/api/v1/block/hash/:height"
-	ApiGetTransaction      = "/api/v1/transaction/:hash"
-	ApiGetAsset            = "/api/v1/asset/:hash"
-	ApiGetBalanceByAddr    = "/api/v1/asset/balances/:addr"
-	ApiGetBalanceByAsset   = "/api/v1/asset/balance/:addr/:assetid"
-	ApiGetUTXOByAsset      = "/api/v1/asset/utxo/:addr/:assetid"
-	ApiGetUTXOByAddr       = "/api/v1/asset/utxos/:addr"
-	ApiSendRawTransaction  = "/api/v1/sendtransaction"
-	ApiGetTransactionPool  = "/api/v1/transactionpool"
+	ApiGetConnectionCount  = "/api/v2/node/connectioncount"
+	ApiGetNodeState        = "/api/v2/node/state"
+	ApiGetBlockTxsByHeight = "/api/v2/block/transactions/height/:height"
+	ApiGetBlockByHeight    = "/api/v2/block/details/height/:height"
+	ApiGetBlockByHash      = "/api/v2/block/details/hash/:hash"
+	ApiGetBlockHeight      = "/api/v2/block/height"
+	ApiGetBlockHash        = "/api/v2/block/hash/:height"
+	ApiGetTransaction      = "/api/v2/transaction/:hash"
+	ApiGetAsset            = "/api/v2/asset/:hash"
+	ApiGetBalanceByAddr    = "/api/v2/asset/balances/:addr"
+	ApiGetBalanceByAsset   = "/api/v2/asset/balance/:addr/:assetid"
+	ApiGetUTXOByAsset      = "/api/v2/asset/utxo/:addr/:assetid"
+	ApiGetUTXOByAddr       = "/api/v2/asset/utxos/:addr"
+	ApiSendRawTransaction  = "/api/v2/sendtransaction"
+	ApiGetTransactionPool  = "/api/v2/transactionpool"
 
 	//extended
-	ApiGetHistory = "/api/v1/history/:addr"
-	ApiCreateTx   = "/api/v1/createTx"
-	APiCmc        = "/api/v1/cmc"
+	ApiGetHistory = "/api/v2/history/:addr"
+	ApiCreateTx   = "/api/v2/createtransaction"
+	APiCmc        = "/api/v2/cmc"
 )
 
 type Action struct {
