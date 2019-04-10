@@ -8,8 +8,10 @@ import (
 	common2 "github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/log"
 	. "github.com/elastos/Elastos.ELA/core/types"
+	"github.com/elastos/Elastos.ELA/core/types/outputpayload"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
 	"github.com/robfig/cron"
+	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -23,6 +25,8 @@ const (
 	ELA         uint64 = 100000000
 )
 
+var Vote TxType = 0x90
+
 var txTypeEnum = map[TxType]string{
 	CoinBase:                "CoinBase",
 	RegisterAsset:           "RegisterAsset",
@@ -33,6 +37,7 @@ var txTypeEnum = map[TxType]string{
 	RechargeToSideChain:     "RechargeToSideChain",
 	WithdrawFromSideChain:   "WithdrawFromSideChain",
 	TransferCrossChainAsset: "TransferCrossChainAsset",
+	Vote:                    "Vote",
 }
 
 type ChainStoreExtend struct {
@@ -141,7 +146,20 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 			}
 			receive := make(map[string]int64)
 			var totalOutput int64 = 0
+			vote := outputpayload.VoteOutput{}
 			for _, output := range tx.Outputs {
+				outputPayload := output.Payload
+				if tx.TxType != Vote && outputPayload != nil && outputPayload.Validate() == nil {
+					var buf bytes.Buffer
+					err := outputPayload.Deserialize(&buf)
+					if err == nil || err == io.EOF {
+						err = vote.Serialize(&buf)
+						if err == nil || err == io.EOF {
+							tx.TxType = Vote
+						}
+					}
+				}
+
 				address, _ := output.ProgramHash.ToAddress()
 				var valueCross int64
 				if isCrossTx == true && (address == MINING_ADDR || strings.Index(address, "X") == 0 || address == "4oLvT2") {
