@@ -19,26 +19,12 @@ import (
 )
 
 const (
-	INCOME      string = "income"
-	SPEND       string = "spend"
-	MINING_ADDR string = "0000000000000000000000000000000000"
-	ELA         uint64 = 100000000
+	INCOME string = "income"
+	SPEND  string = "spend"
+	ELA    uint64 = 100000000
 )
 
-var Vote TxType = 0x90
-
-var txTypeEnum = map[TxType]string{
-	CoinBase:                "CoinBase",
-	RegisterAsset:           "RegisterAsset",
-	TransferAsset:           "TransferAsset",
-	Record:                  "Record",
-	Deploy:                  "Deploy",
-	SideChainPow:            "SideChainPow",
-	RechargeToSideChain:     "RechargeToSideChain",
-	WithdrawFromSideChain:   "WithdrawFromSideChain",
-	TransferCrossChainAsset: "TransferCrossChainAsset",
-	Vote:                    "Vote",
-}
+var MINING_ADDR = common2.Uint168{}
 
 type ChainStoreExtend struct {
 	IChainStore
@@ -81,33 +67,32 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 	txhs := make([]types.TransactionHistory, 0)
 	for i := 0; i < len(txs); i++ {
 		tx := txs[i]
-		var memo string
+		var memo []byte
 		if len(tx.Attributes) > 0 {
-			memo = string(tx.Attributes[0].Data)
+			memo = tx.Attributes[0].Data
 		}
 		if tx.TxType == CoinBase {
 			vouts := txs[i].Outputs
-			var to []string
-			hold := make(map[string]uint64)
+			var to []common2.Uint168
+			hold := make(map[common2.Uint168]uint64)
 			txhscoinbase := make([]types.TransactionHistory, 0)
 			for _, vout := range vouts {
-				address, _ := vout.ProgramHash.ToAddress()
-				if !common.ContainsString(address, to) {
-					to = append(to, address)
+				if !common.ContainsU168(vout.ProgramHash, to) {
+					to = append(to, vout.ProgramHash)
 					txh := types.TransactionHistory{}
-					txh.Address = address
-					txh.Inputs = []string{MINING_ADDR}
-					txh.TxType = txTypeEnum[tx.TxType]
-					txh.Txid, _ = common.ReverseHexString(tx.Hash().String())
+					txh.Address = vout.ProgramHash
+					txh.Inputs = []common2.Uint168{MINING_ADDR}
+					txh.TxType = tx.TxType
+					txh.Txid = tx.Hash()
 					txh.Height = uint64(block.Height)
 					txh.CreateTime = uint64(block.Header.Timestamp)
-					txh.Type = INCOME
+					txh.Type = []byte(INCOME)
 					txh.Fee = 0
 					txh.Memo = memo
-					hold[address] = uint64(vout.Value)
+					hold[vout.ProgramHash] = uint64(vout.Value)
 					txhscoinbase = append(txhscoinbase, txh)
 				} else {
-					hold[address] += uint64(vout.Value)
+					hold[vout.ProgramHash] += uint64(vout.Value)
 				}
 			}
 			for i := 0; i < len(txhscoinbase); i++ {
@@ -120,10 +105,10 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 			if tx.TxType == TransferCrossChainAsset {
 				isCrossTx = true
 			}
-			spend := make(map[string]int64)
+			spend := make(map[common2.Uint168]int64)
 			var totalInput int64 = 0
-			var from []string
-			var to []string
+			var from []common2.Uint168
+			var to []common2.Uint168
 			for _, input := range tx.Inputs {
 				txid := input.Previous.TxID
 				index := input.Previous.Index
@@ -132,7 +117,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				if err != nil {
 					return err
 				}
-				address, _ := referTx.Outputs[index].ProgramHash.ToAddress()
+				address := referTx.Outputs[index].ProgramHash
 				totalInput += int64(referTx.Outputs[index].Value)
 				v, ok := spend[address]
 				if ok {
@@ -140,29 +125,29 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				} else {
 					spend[address] = int64(referTx.Outputs[index].Value)
 				}
-				if !common.ContainsString(address, from) {
+				if !common.ContainsU168(address, from) {
 					from = append(from, address)
 				}
 			}
-			receive := make(map[string]int64)
+			receive := make(map[common2.Uint168]int64)
 			var totalOutput int64 = 0
 			vote := outputpayload.VoteOutput{}
 			for _, output := range tx.Outputs {
 				outputPayload := output.Payload
-				if tx.TxType != Vote && outputPayload != nil && outputPayload.Validate() == nil {
+				if tx.TxType != types.Vote && outputPayload != nil && outputPayload.Validate() == nil {
 					var buf bytes.Buffer
 					err := outputPayload.Deserialize(&buf)
 					if err == nil || err == io.EOF {
 						err = vote.Serialize(&buf)
 						if err == nil || err == io.EOF {
-							tx.TxType = Vote
+							tx.TxType = types.Vote
 						}
 					}
 				}
 
 				address, _ := output.ProgramHash.ToAddress()
 				var valueCross int64
-				if isCrossTx == true && (address == MINING_ADDR || strings.Index(address, "X") == 0 || address == "4oLvT2") {
+				if isCrossTx == true && (output.ProgramHash == MINING_ADDR || strings.Index(address, "X") == 0 || address == "4oLvT2") {
 					switch pl := tx.Payload.(type) {
 					case *payload.TransferCrossChainAsset:
 						valueCross = int64(pl.CrossChainAmounts[0])
@@ -173,14 +158,14 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				} else {
 					totalOutput += int64(output.Value)
 				}
-				v, ok := receive[address]
+				v, ok := receive[output.ProgramHash]
 				if ok {
-					receive[address] = v + int64(output.Value)
+					receive[output.ProgramHash] = v + int64(output.Value)
 				} else {
-					receive[address] = int64(output.Value)
+					receive[output.ProgramHash] = int64(output.Value)
 				}
-				if !common.ContainsString(address, to) {
-					to = append(to, address)
+				if !common.ContainsU168(output.ProgramHash, to) {
+					to = append(to, output.ProgramHash)
 				}
 			}
 			fee := totalInput - totalOutput
@@ -207,11 +192,11 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				txh.Value = uint64(value)
 				txh.Address = k
 				txh.Inputs = from
-				txh.TxType = txTypeEnum[tx.TxType]
-				txh.Txid, _ = common.ReverseHexString(tx.Hash().String())
+				txh.TxType = tx.TxType
+				txh.Txid = tx.Hash()
 				txh.Height = uint64(block.Height)
 				txh.CreateTime = uint64(block.Header.Timestamp)
-				txh.Type = transferType
+				txh.Type = []byte(transferType)
 				txh.Fee = realFee
 				txh.Outputs = to
 				txh.Memo = memo
@@ -223,11 +208,11 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				txh.Value = uint64(r)
 				txh.Address = k
 				txh.Inputs = from
-				txh.TxType = txTypeEnum[tx.TxType]
-				txh.Txid, _ = common.ReverseHexString(tx.Hash().String())
+				txh.TxType = tx.TxType
+				txh.Txid = tx.Hash()
 				txh.Height = uint64(block.Height)
 				txh.CreateTime = uint64(block.Header.Timestamp)
-				txh.Type = SPEND
+				txh.Type = []byte(SPEND)
 				txh.Fee = uint64(fee)
 				txh.Outputs = to
 				txh.Memo = memo
@@ -268,17 +253,21 @@ func (c ChainStoreExtend) loop() {
 func (c ChainStoreExtend) GetTxHistory(addr string) types.TransactionHistorySorter {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataTxHistoryPrefix))
-	common2.WriteVarString(key, addr)
-
+	var txhs types.TransactionHistorySorter
+	address, err := common2.Uint168FromAddress(addr)
+	if err != nil {
+		return txhs
+	}
+	common2.WriteVarBytes(key, address[:])
 	iter := c.NewIterator(key.Bytes())
 	defer iter.Release()
-	var txhs types.TransactionHistorySorter
+
 	for iter.Next() {
 		val := new(bytes.Buffer)
 		val.Write(iter.Value())
 		txh := types.TransactionHistory{}
-		txh.Deserialize(val)
-		txhs = append(txhs, txh)
+		txhd, _ := txh.Deserialize(val)
+		txhs = append(txhs, *txhd)
 	}
 	sort.Sort(txhs)
 	return txhs

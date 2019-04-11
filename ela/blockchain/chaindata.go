@@ -50,7 +50,7 @@ func (c ChainStoreExtend) persistTransactionHistory(txhs []types.TransactionHist
 func (c ChainStoreExtend) doPersistTransactionHistory(history types.TransactionHistory) error {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataTxHistoryPrefix))
-	err := common.WriteVarString(key, history.Address)
+	err := common.WriteVarBytes(key, history.Address[:])
 	if err != nil {
 		return err
 	}
@@ -171,13 +171,13 @@ func (c ChainStoreExtend) saveToDb(cmcResponseUSD, cmcResponseCNY, cmcResponseBT
 }
 
 func (c ChainStoreExtend) persistCmc(cmc types.Cmcs) error {
-	println("Persist CMC")
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataCmcPrefix))
 	common.WriteVarString(key, "CMC")
+	c.Delete(key.Bytes())
 	value := new(bytes.Buffer)
 	cmc.Serialize(value)
-	c.BatchPut(key.Bytes(), value.Bytes())
+	c.Put(key.Bytes(), value.Bytes())
 	return nil
 }
 
