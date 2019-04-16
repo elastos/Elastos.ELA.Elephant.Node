@@ -305,7 +305,7 @@ func SubmitSidechainIllegalData(param Params) map[string]interface{} {
 	return ResponsePack(Success, true)
 }
 
-func GetDPOSPeersInfo(params Params) map[string]interface{} {
+func GetArbiterPeersInfo(params Params) map[string]interface{} {
 	if Arbiter == nil {
 		return ResponsePack(InternalError, "arbiter disabled")
 	}
@@ -644,8 +644,8 @@ func SendRawTransaction(param Params) map[string]interface{} {
 		return ResponsePack(InvalidTransaction, err.Error())
 	}
 
-	if errCode := VerifyAndSendTx(&txn); errCode != Success {
-		return ResponsePack(errCode, errCode.Message())
+	if err := VerifyAndSendTx(&txn); err != nil {
+		return ResponsePack(err.(ErrCode), err.Error())
 	}
 
 	return ResponsePack(Success, ToReversedString(txn.Hash()))
@@ -740,32 +740,21 @@ func GetArbitratorGroupByHeight(param Params) map[string]interface{} {
 
 	hash, err := Store.GetBlockHash(height)
 	if err != nil {
-		return ResponsePack(UnknownBlock, "")
+		return ResponsePack(UnknownBlock, "not found block hash at given height")
 	}
 
-	block, err := Store.GetBlock(hash)
-	if err != nil {
-		return ResponsePack(InternalError, "")
-	}
-
-	arbitratorsBytes := Arbiters.GetArbitrators()
-	Arbiters.GetOnDutyArbitrator()
-	var index int
-	if block.Height >= config.Parameters.PublicDPOSHeight-1 {
-		index = int(block.Height-config.Parameters.PublicDPOSHeight+1) % len(arbitratorsBytes)
-	} else if block.Height >= config.Parameters.CRCOnlyDPOSHeight-1 {
-		index = int(block.Height-config.Parameters.CRCOnlyDPOSHeight+1) % len(arbitratorsBytes)
-	} else {
-		index = int(block.Header.Height) % len(arbitratorsBytes)
+	block, _ := Store.GetBlock(hash)
+	if block == nil {
+		return ResponsePack(InternalError, "not found block at given height")
 	}
 
 	var arbitrators []string
-	for _, data := range arbitratorsBytes {
+	for _, data := range Arbiters.GetArbitrators() {
 		arbitrators = append(arbitrators, common.BytesToHexString(data))
 	}
 
 	result := ArbitratorGroupInfo{
-		OnDutyArbitratorIndex: index,
+		OnDutyArbitratorIndex: Arbiters.GetDutyIndexByHeight(height),
 		Arbitrators:           arbitrators,
 	}
 
@@ -1371,17 +1360,19 @@ func getOutputPayloadInfo(op OutputPayload) OutputPayloadInfo {
 	return nil
 }
 
-func VerifyAndSendTx(tx *Transaction) ErrCode {
+func VerifyAndSendTx(tx *Transaction) error {
 	// if transaction is verified unsuccessfully then will not put it into transaction pool
-	if errCode := TxMemPool.AppendToTxnPool(tx); errCode != Success {
-		log.Info("[httpjsonrpc] VerifyTransaction failed when AppendToTxnPool. Errcode:", errCode)
-		return errCode
+	if err := TxMemPool.AppendToTxPool(tx); err != nil {
+		log.Info("[httpjsonrpc] VerifyTransaction failed when AppendToTxnPool. Errcode:", err)
+		return err
 	}
 
-	// Broadcast to peer-to-peer network.
-	Server.BroadcastMessage(msg.NewTx(tx))
+	// Relay tx inventory to other peers.
+	txHash := tx.Hash()
+	iv := msg.NewInvVect(msg.InvTypeTx, &txHash)
+	Server.RelayInventory(iv, tx)
 
-	return Success
+	return nil
 }
 
 func ResponsePack(errCode ErrCode, result interface{}) map[string]interface{} {

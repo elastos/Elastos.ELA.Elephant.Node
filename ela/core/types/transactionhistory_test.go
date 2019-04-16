@@ -6,10 +6,10 @@ import (
 )
 
 func TestSort(t *testing.T) {
-	t1 := TransactionHistory{
+	t1 := TransactionHistoryDisplay{
 		Height: 10,
 	}
-	t2 := TransactionHistory{
+	t2 := TransactionHistoryDisplay{
 		Height: 2,
 	}
 	t0 := TransactionHistorySorter{
