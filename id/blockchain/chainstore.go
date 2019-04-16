@@ -152,6 +152,7 @@ func persistDidProperty(batch database.Batch, property types2.DidProperty, b *ty
 	key := new(bytes.Buffer)
 	common.WriteVarBytes(key, property.Did.Bytes())
 	common.WriteVarBytes(key, property.Property_key)
+	common.WriteUint32(key, property.Height)
 	value := new(bytes.Buffer)
 	if err := property.Serialize(value); err != nil {
 		return err
