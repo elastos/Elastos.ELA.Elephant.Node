@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/id/blockchain"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -35,6 +36,7 @@ const (
 	DataPath = "elastos_did"
 	DataDir  = "data"
 	ChainDir = "chain"
+	ExtDir   = "ext"
 	SpvDir   = "spv"
 )
 
@@ -66,7 +68,11 @@ func Go(Version, GoVersion string) {
 		eladlog.Fatalf("open chain store failed, %s", err)
 		os.Exit(1)
 	}
-	defer idChainStore.Close()
+	_, err = blockchain2.NewChainStoreEx(idChainStore)
+	if err != nil {
+		eladlog.Fatalf("open chain store failed, %s", err)
+		os.Exit(1)
+	}
 
 	eladlog.Info("2. SPV module init")
 	genesisHash := activeNetParams.GenesisBlock.Hash()
