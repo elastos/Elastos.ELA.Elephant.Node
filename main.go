@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/id"
 	"github.com/elastos/Elastos.ELA.Utility/signal"
 )
 
@@ -16,6 +17,6 @@ var (
 func main() {
 	var interrupt = signal.NewInterrupt()
 	go ela.Go(Version, GoVersion)
-	//go id.Go()
+	go id.Go(Version, GoVersion)
 	<-interrupt.C
 }
