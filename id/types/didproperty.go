@@ -21,7 +21,7 @@ type DidPropertyDisplay struct {
 }
 
 type DidProperty struct {
-	Did                 common.Uint168
+	Did                 []byte
 	Did_status          []byte
 	Public_key          []byte
 	Property_key        []byte
@@ -52,7 +52,7 @@ type DidInfo struct {
 }
 
 func (dp *DidProperty) Serialize(w io.Writer) error {
-	err := common.WriteVarBytes(w, dp.Did.Bytes())
+	err := common.WriteVarBytes(w, dp.Did)
 	if err != nil {
 		return errors.New("[DidProperty], did serialize failed.")
 	}

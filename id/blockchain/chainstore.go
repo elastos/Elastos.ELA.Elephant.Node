@@ -14,6 +14,8 @@ import (
 	"github.com/elastos/Elastos.ELA/crypto"
 )
 
+const DID_PropertyPrefix blockchain2.EntryPrefix = 0x99
+
 type IDChainStoreEx struct {
 	*blockchain.IDChainStore
 }
@@ -112,15 +114,9 @@ func (s *IDChainStoreEx) externalBlockAction(b *types.Block) {
 					log.Warn("[parsing did property]: RawData is not Json")
 					continue
 				}
-				u168 := common.Uint168{}
-				err = u168.Deserialize(bytes.NewBuffer(pub))
-				if err != nil {
-					log.Warn("[parsing did property]: invalid public key")
-					continue
-				}
 				for _, v := range raw.Properties {
 					didPropertys = append(didPropertys, types2.DidProperty{
-						Did:                 u168,
+						Did:                 pub,
 						Did_status:          []byte(v.Status),
 						Public_key:          pub,
 						Property_key:        []byte(v.Key),
@@ -134,23 +130,26 @@ func (s *IDChainStoreEx) externalBlockAction(b *types.Block) {
 			}
 		}
 	}
-	batch := s.NewBatch()
-	for _, v := range didPropertys {
-		err := persistDidProperty(batch, v, b)
-		if err != nil {
-			log.Warn("[parsing did property]: Unexpected happend , rollback database")
-			batch.Rollback()
-			return
+	if len(didPropertys) > 0 {
+		batch := s.NewBatch()
+		for _, v := range didPropertys {
+			err := persistDidProperty(batch, v, b)
+			if err != nil {
+				log.Warn("[parsing did property]: Unexpected happend , rollback database")
+				batch.Rollback()
+				return
+			}
 		}
+		batch.Commit()
 	}
-	batch.Commit()
 }
 
-// key: SYS_CurrentBlock
-// value: current block hash || height
+// key: DID || property_key || height
+// value: property
 func persistDidProperty(batch database.Batch, property types2.DidProperty, b *types.Block) error {
 	key := new(bytes.Buffer)
-	common.WriteVarBytes(key, property.Did.Bytes())
+	key.WriteByte(byte(DID_PropertyPrefix))
+	common.WriteVarBytes(key, property.Did)
 	common.WriteVarBytes(key, property.Property_key)
 	common.WriteUint32(key, property.Height)
 	value := new(bytes.Buffer)
