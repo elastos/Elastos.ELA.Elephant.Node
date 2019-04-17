@@ -97,10 +97,7 @@ func (dp *DidProperty) Deserialize(r io.Reader) (*DidPropertyDisplay, error) {
 	if err != nil {
 		return rst, errors.New("[DidProperty], did deserialize failed.")
 	}
-	rst.Did, err = common2.GenDid(did)
-	if err != nil {
-		return rst, errors.New("[DidProperty], did deserialize failed.")
-	}
+	rst.Did = string(did)
 	Did_status, err := common.ReadVarBytes(r, 1024, "did status")
 	if err != nil {
 		return rst, errors.New("[DidProperty], did_status deserialize failed.")
@@ -110,7 +107,7 @@ func (dp *DidProperty) Deserialize(r io.Reader) (*DidPropertyDisplay, error) {
 	if err != nil {
 		return rst, errors.New("[DidProperty], Public_key deserialize failed.")
 	}
-	rst.Public_key = string(Public_key)
+	rst.Public_key = hex.EncodeToString(Public_key)
 	Property_key, err := common.ReadVarBytes(r, common.MaxVarStringLength, "property key")
 	if err != nil {
 		return rst, errors.New("[DidProperty], Property_key deserialize failed.")
@@ -146,3 +143,11 @@ func (dp *DidProperty) Deserialize(r io.Reader) (*DidPropertyDisplay, error) {
 	rst.Height = Height
 	return rst, nil
 }
+
+// DidPropertyDisplaySorter implements sort.Interface for []TransactionHistory based on
+// the Height field.
+type DidPropertyDisplaySorter []DidPropertyDisplay
+
+func (a DidPropertyDisplaySorter) Len() int           { return len(a) }
+func (a DidPropertyDisplaySorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a DidPropertyDisplaySorter) Less(i, j int) bool { return a[i].Height > a[j].Height }

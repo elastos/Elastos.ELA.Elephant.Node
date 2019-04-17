@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/id/blockchain"
+	service2 "github.com/elastos/Elastos.ELA.Elephant.Node/id/service"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -16,6 +17,7 @@ import (
 	mp "github.com/elastos/Elastos.ELA.SideChain.ID/mempool"
 	sv "github.com/elastos/Elastos.ELA.SideChain.ID/service"
 
+	"github.com/elastos/Elastos.ELA.Elephant.Node/utils/http/restful"
 	"github.com/elastos/Elastos.ELA.SideChain/blockchain"
 	"github.com/elastos/Elastos.ELA.SideChain/mempool"
 	"github.com/elastos/Elastos.ELA.SideChain/pow"
@@ -26,7 +28,6 @@ import (
 	"github.com/elastos/Elastos.ELA/utils/elalog"
 	"github.com/elastos/Elastos.ELA/utils/http"
 	"github.com/elastos/Elastos.ELA/utils/http/jsonrpc"
-	"github.com/elastos/Elastos.ELA/utils/http/restful"
 	"github.com/elastos/Elastos.ELA/utils/signal"
 )
 
@@ -68,7 +69,7 @@ func Go(Version, GoVersion string) {
 		eladlog.Fatalf("open chain store failed, %s", err)
 		os.Exit(1)
 	}
-	_, err = blockchain2.NewChainStoreEx(idChainStore)
+	idchainStoreEx, err := blockchain2.NewChainStoreEx(idChainStore)
 	if err != nil {
 		eladlog.Fatalf("open chain store failed, %s", err)
 		os.Exit(1)
@@ -185,8 +186,8 @@ func Go(Version, GoVersion string) {
 		Store:    idChainStore,
 	}
 	service := sv.NewHttpService(&serviceCfg)
-
-	rpcServer := newJsonRpcServer(cfg.HttpJsonPort, service)
+	serviceEx := service2.NewHttpServiceEx(service, idchainStoreEx)
+	rpcServer := newJsonRpcServer(cfg.HttpJsonPort, serviceEx)
 	defer rpcServer.Stop()
 	go func() {
 		if err := rpcServer.Start(); err != nil {
@@ -194,7 +195,7 @@ func Go(Version, GoVersion string) {
 		}
 	}()
 
-	restServer := newRESTfulServer(cfg.HttpRestPort, service.HttpService)
+	restServer := newRESTfulServer(cfg.HttpRestPort, serviceEx)
 	defer restServer.Stop()
 	go func() {
 		if err := restServer.Start(); err != nil {
@@ -216,7 +217,7 @@ func Go(Version, GoVersion string) {
 	<-interrupt.C
 }
 
-func newJsonRpcServer(port uint16, service *sv.HttpService) *jsonrpc.Server {
+func newJsonRpcServer(port uint16, service *service2.HttpServiceEx) *jsonrpc.Server {
 	s := jsonrpc.NewServer(&jsonrpc.Config{
 		ServePort: port,
 		User:      cfg.RPCUser,
@@ -254,7 +255,7 @@ func newJsonRpcServer(port uint16, service *sv.HttpService) *jsonrpc.Server {
 	return s
 }
 
-func newRESTfulServer(port uint16, service *service.HttpService) *restful.Server {
+func newRESTfulServer(port uint16, service *service2.HttpServiceEx) *restful.Server {
 	var (
 		s = restful.NewServer(&restful.Config{ServePort: port})
 
@@ -284,6 +285,10 @@ func newRESTfulServer(port uint16, service *service.HttpService) *restful.Server
 		ApiSendRawTransaction  = "/api/v1/transaction"
 		ApiGetTransactionPool  = "/api/v1/transactionpool"
 		ApiRestart             = "/api/v1/restart"
+
+		//extend
+		ApiGetDIDProperty      = "/api/v1/did/:did/property"
+		ApiGetDidPropertyByKey = "/api/v1/did/:did/property/search"
 	)
 
 	s.RegisterGetAction(ApiGetConnectionCount, service.GetConnectionCount)
@@ -299,8 +304,12 @@ func newRESTfulServer(port uint16, service *service.HttpService) *restful.Server
 	s.RegisterGetAction(ApiGetUTXOByAsset, service.GetUnspendsByAsset)
 	s.RegisterGetAction(ApiGetBalanceByAddr, service.GetBalanceByAddr)
 	s.RegisterGetAction(ApiGetBalanceByAsset, service.GetBalanceByAsset)
-
+	s.RegisterGetAction(ApiGetBalanceByAsset, service.GetBalanceByAsset)
 	s.RegisterPostAction(ApiSendRawTransaction, sendRawTransaction)
+
+	//ext
+	s.RegisterGetAction(ApiGetDIDProperty, service.GetDidProperty)
+	s.RegisterGetAction(ApiGetDidPropertyByKey, service.GetDidPropertyByKey)
 
 	return s
 }

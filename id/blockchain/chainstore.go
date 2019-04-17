@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	common2 "github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	types2 "github.com/elastos/Elastos.ELA.Elephant.Node/id/types"
 	"github.com/elastos/Elastos.ELA.SideChain.ID/blockchain"
 	blockchain2 "github.com/elastos/Elastos.ELA.SideChain/blockchain"
@@ -12,6 +13,7 @@ import (
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/log"
 	"github.com/elastos/Elastos.ELA/crypto"
+	"sort"
 )
 
 const DID_PropertyPrefix blockchain2.EntryPrefix = 0x99
@@ -114,9 +116,10 @@ func (s *IDChainStoreEx) externalBlockAction(b *types.Block) {
 					log.Warn("[parsing did property]: RawData is not Json")
 					continue
 				}
+				did, err := common2.GenDid(pub)
 				for _, v := range raw.Properties {
 					didPropertys = append(didPropertys, types2.DidProperty{
-						Did:                 pub,
+						Did:                 []byte(did),
 						Did_status:          []byte(v.Status),
 						Public_key:          pub,
 						Property_key:        []byte(v.Key),
@@ -158,4 +161,29 @@ func persistDidProperty(batch database.Batch, property types2.DidProperty, b *ty
 	}
 	batch.Put(key.Bytes(), value.Bytes())
 	return nil
+}
+
+func (c *IDChainStoreEx) GetDidPropertyByKey(encodeDid string, propertyKey string) types2.DidPropertyDisplaySorter {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DID_PropertyPrefix))
+	common.WriteVarBytes(key, []byte(encodeDid))
+	if propertyKey != "" {
+		common.WriteVarBytes(key, []byte(propertyKey))
+	}
+	it := c.NewIterator([]byte(key.Bytes()))
+	var dpds types2.DidPropertyDisplaySorter
+	for it.Next() {
+		val := new(bytes.Buffer)
+		val.Write(it.Value())
+		dp := types2.DidProperty{}
+		dpd, _ := dp.Deserialize(val)
+		dpds = append(dpds, *dpd)
+	}
+	it.Release()
+	sort.Sort(dpds)
+	return dpds
+}
+
+func (c *IDChainStoreEx) GetDidProperty(hexDid string) types2.DidPropertyDisplaySorter {
+	return c.GetDidPropertyByKey(hexDid, "")
 }
