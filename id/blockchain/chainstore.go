@@ -184,6 +184,6 @@ func (c *IDChainStoreEx) GetDidPropertyByKey(encodeDid string, propertyKey strin
 	return dpds
 }
 
-func (c *IDChainStoreEx) GetDidProperty(hexDid string) types2.DidPropertyDisplaySorter {
-	return c.GetDidPropertyByKey(hexDid, "")
+func (c *IDChainStoreEx) GetDidProperty(encodeDid string) types2.DidPropertyDisplaySorter {
+	return c.GetDidPropertyByKey(encodeDid, "")
 }
