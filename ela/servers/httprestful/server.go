@@ -31,13 +31,13 @@ const (
 	ApiGetBalanceByAsset   = "/api/v1/asset/balance/:addr/:assetid"
 	ApiGetUTXOByAsset      = "/api/v1/asset/utxo/:addr/:assetid"
 	ApiGetUTXOByAddr       = "/api/v1/asset/utxos/:addr"
-	ApiSendRawTransaction  = "/api/v1/sendtransaction"
+	ApiSendRawTransaction  = "/api/v1/transaction"
 	ApiGetTransactionPool  = "/api/v1/transactionpool"
 
 	//extended
-	ApiGetHistory = "/api/v1/history/:addr"
-	ApiCreateTx   = "/api/v1/createtransaction"
-	APiCmc        = "/api/v1/cmc"
+	ApiGetHistory = "/api/1/history/:addr"
+	ApiCreateTx   = "/api/1/createTx"
+	APiCmc        = "/api/1/cmc"
 )
 
 type Action struct {
@@ -276,7 +276,6 @@ func (rt *restServer) write(w http.ResponseWriter, data []byte) {
 }
 
 func (rt *restServer) response(w http.ResponseWriter, resp map[string]interface{}) {
-	resp["Desc"] = ErrMap[resp["Error"].(ErrCode)]
 	data, err := json.Marshal(resp)
 	if err != nil {
 		log.Fatal("HTTP Handle - json.Marshal: %v", err)

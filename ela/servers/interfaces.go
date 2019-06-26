@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/core/types"
-	"math"
 	"sort"
 	"strconv"
+	"strings"
 
 	aux "github.com/elastos/Elastos.ELA/auxpow"
 	"github.com/elastos/Elastos.ELA/blockchain"
@@ -33,7 +32,7 @@ import (
 
 var (
 	Compile   string
-	Config    *config.ConfigParams
+	Config    *config.Configuration
 	Chain     *blockchain.BlockChain
 	Store     blockchain.IChainStore
 	TxMemPool *mempool.TxPool
@@ -444,7 +443,7 @@ func DiscreteMining(param Params) map[string]interface{} {
 
 	blockHashes, err := Pow.DiscreteMining(uint32(count))
 	if err != nil {
-		return ResponsePack(Error, err)
+		return ResponsePack(Error, err.Error())
 	}
 
 	for _, hash := range blockHashes {
@@ -866,6 +865,110 @@ func GetReceivedByAddress(param Params) map[string]interface{} {
 	return ResponsePack(Success, totalValue.String())
 }
 
+func GetUTXOsByAmount(param Params) map[string]interface{} {
+	bestHeight := Store.GetHeight()
+
+	result := make([]UTXOInfo, 0)
+	address, ok := param.String("address")
+	if !ok {
+		return ResponsePack(InvalidParams, "need a parameter named address!")
+	}
+	amountStr, ok := param.String("amount")
+	if !ok {
+		return ResponsePack(InvalidParams, "need a parameter named amount!")
+	}
+	amount, err := common.StringToFixed64(amountStr)
+	if err != nil {
+		return ResponsePack(InvalidParams, "invalid amount!")
+	}
+	programHash, err := common.Uint168FromAddress(address)
+	if err != nil {
+		return ResponsePack(InvalidParams, "invalid address: "+address)
+	}
+	unspents, err := Store.GetUnspentsFromProgramHash(*programHash)
+	if err != nil {
+		return ResponsePack(InvalidParams, "cannot get asset with program")
+	}
+	utxoType := "mixed"
+	if t, ok := param.String("utxotype"); ok {
+		switch t {
+		case "mixed", "vote", "normal":
+			utxoType = t
+		default:
+			return ResponsePack(InvalidParams, "invalid utxotype")
+		}
+	}
+	totalAmount := common.Fixed64(0)
+	for _, unspent := range unspents[config.ELAAssetID] {
+		if totalAmount >= *amount {
+			break
+		}
+		tx, height, err := Store.GetTransaction(unspent.TxID)
+		if err != nil {
+			return ResponsePack(InternalError, "unknown transaction "+
+				unspent.TxID.String()+" from persisted utxo")
+		}
+		if utxoType == "vote" && (tx.Version < TxVersion09 ||
+			tx.Version >= TxVersion09 && tx.Outputs[unspent.Index].Type != OTVote) {
+			continue
+		}
+		if utxoType == "normal" && tx.Version >= TxVersion09 &&
+			tx.Outputs[unspent.Index].Type == OTVote {
+			continue
+		}
+		if tx.TxType == CoinBase && bestHeight-height < config.DefaultParams.CoinbaseMaturity {
+			continue
+		}
+		totalAmount += unspent.Value
+		result = append(result, UTXOInfo{
+			TxType:        byte(tx.TxType),
+			TxID:          ToReversedString(unspent.TxID),
+			AssetID:       ToReversedString(config.ELAAssetID),
+			VOut:          unspent.Index,
+			Amount:        unspent.Value.String(),
+			Address:       address,
+			OutputLock:    tx.Outputs[unspent.Index].OutputLock,
+			Confirmations: bestHeight - height + 1,
+		})
+	}
+
+	if totalAmount < *amount {
+		return ResponsePack(InternalError, "not enough utxo")
+	}
+
+	return ResponsePack(Success, result)
+}
+
+func GetAmountByInputs(param Params) map[string]interface{} {
+	inputStr, ok := param.String("inputs")
+	if !ok {
+		return ResponsePack(InvalidParams, "need a parameter named inputs!")
+	}
+
+	inputBytes, _ := common.HexStringToBytes(inputStr)
+	r := bytes.NewReader(inputBytes)
+	count, err := common.ReadVarUint(r, 0)
+	if err != nil {
+		return ResponsePack(InvalidParams, "invalid inputs")
+	}
+
+	amount := common.Fixed64(0)
+	for i := uint64(0); i < count; i++ {
+		input := new(Input)
+		if err := input.Deserialize(r); err != nil {
+			return ResponsePack(InvalidParams, "invalid inputs")
+		}
+		tx, _, err := Store.GetTransaction(input.Previous.TxID)
+		if err != nil {
+			return ResponsePack(InternalError, "unknown transaction "+
+				input.Previous.TxID.String()+" from persisted utxo")
+		}
+		amount += tx.Outputs[input.Previous.Index].Value
+	}
+
+	return ResponsePack(Success, amount.String())
+}
+
 func ListUnspent(param Params) map[string]interface{} {
 	bestHeight := Store.GetHeight()
 
@@ -904,6 +1007,9 @@ func ListUnspent(param Params) map[string]interface{} {
 				continue
 			}
 			if utxoType == "normal" && tx.Version >= TxVersion09 && tx.Outputs[unspent.Index].Type == OTVote {
+				continue
+			}
+			if unspent.Value == 0 {
 				continue
 			}
 			result = append(result, UTXOInfo{
@@ -1036,24 +1142,13 @@ func GetTransactionByHash(param Params) map[string]interface{} {
 }
 
 func GetExistWithdrawTransactions(param Params) map[string]interface{} {
-	txsStr, ok := param.String("txs")
+	txList, ok := param.ArrayString("txs")
 	if !ok {
 		return ResponsePack(InvalidParams, "txs not found")
 	}
 
-	txsBytes, err := common.HexStringToBytes(txsStr)
-	if err != nil {
-		return ResponsePack(InvalidParams, "")
-	}
-
-	var txHashes []string
-	err = json.Unmarshal(txsBytes, &txHashes)
-	if err != nil {
-		return ResponsePack(InvalidParams, "")
-	}
-
 	var resultTxHashes []string
-	for _, txHash := range txHashes {
+	for _, txHash := range txList {
 		txHashBytes, err := common.HexStringToBytes(txHash)
 		if err != nil {
 			return ResponsePack(InvalidParams, "")
@@ -1080,7 +1175,6 @@ type Producer struct {
 	Location       uint64 `json:"location"`
 	Active         bool   `json:"active"`
 	Votes          string `json:"votes"`
-	NetAddress     string `json:"netaddress"`
 	State          string `json:"state"`
 	RegisterHeight uint32 `json:"registerheight"`
 	CancelHeight   uint32 `json:"cancelheight"`
@@ -1099,24 +1193,52 @@ func ListProducers(param Params) map[string]interface{} {
 	start, _ := param.Int("start")
 	limit, ok := param.Int("limit")
 	if !ok {
-		limit = math.MaxInt64
+		limit = -1
+	}
+	s, ok := param.String("state")
+	if ok {
+		s = strings.ToLower(s)
+	}
+	var producers []*state.Producer
+	switch s {
+	case "all":
+		producers = Chain.GetState().GetAllProducers()
+	case "pending":
+		producers = Chain.GetState().GetPendingProducers()
+	case "active":
+		producers = Chain.GetState().GetActiveProducers()
+	case "inactive":
+		producers = Chain.GetState().GetInactiveProducers()
+	case "canceled":
+		producers = Chain.GetState().GetCanceledProducers()
+	case "illegal":
+		producers = Chain.GetState().GetIllegalProducers()
+	case "returned":
+		producers = Chain.GetState().GetReturnedDepositProducers()
+	default:
+		producers = Chain.GetState().GetProducers()
 	}
 
-	producers := Chain.GetState().GetProducers()
 	sort.Slice(producers, func(i, j int) bool {
+		if producers[i].Votes() == producers[j].Votes() {
+			return bytes.Compare(producers[i].NodePublicKey(),
+				producers[j].NodePublicKey()) < 0
+		}
 		return producers[i].Votes() > producers[j].Votes()
 	})
+
 	var ps []Producer
+	var totalVotes common.Fixed64
 	for i, p := range producers {
+		totalVotes += p.Votes()
 		producer := Producer{
 			OwnerPublicKey: hex.EncodeToString(p.Info().OwnerPublicKey),
 			NodePublicKey:  hex.EncodeToString(p.Info().NodePublicKey),
 			Nickname:       p.Info().NickName,
 			Url:            p.Info().Url,
 			Location:       p.Info().Location,
-			Active:         p.State() == state.Activate,
+			Active:         p.State() == state.Active,
 			Votes:          p.Votes().String(),
-			NetAddress:     p.Info().NetAddress,
 			State:          p.State().String(),
 			RegisterHeight: p.RegisterHeight(),
 			CancelHeight:   p.CancelHeight(),
@@ -1127,20 +1249,25 @@ func ListProducers(param Params) map[string]interface{} {
 		ps = append(ps, producer)
 	}
 
-	var resultPs []Producer
-	var totalVotes common.Fixed64
-	for i := start; i < limit && i < int64(len(ps)); i++ {
-		resultPs = append(resultPs, ps[i])
+	count := int64(len(producers))
+	if limit < 0 {
+		limit = count
 	}
-	for i := 0; i < len(ps); i++ {
-		v, _ := common.StringToFixed64(ps[i].Votes)
-		totalVotes += *v
+	var resultPs []Producer
+	if start < count {
+		end := start
+		if start+limit <= count {
+			end = start + limit
+		} else {
+			end = count
+		}
+		resultPs = append(resultPs, ps[start:end]...)
 	}
 
 	result := &Producers{
 		Producers:   resultPs,
 		TotalVotes:  totalVotes.String(),
-		TotalCounts: uint64(len(producers)),
+		TotalCounts: uint64(count),
 	}
 
 	return ResponsePack(Success, result)
@@ -1301,7 +1428,7 @@ func getPayloadInfo(p Payload) PayloadInfo {
 		obj.BlockHeight = object.BlockHeight
 		obj.SideBlockHash = object.SideBlockHash.String()
 		obj.SideGenesisHash = object.SideGenesisHash.String()
-		obj.SignedData = common.BytesToHexString(object.SignedData)
+		obj.Signature = common.BytesToHexString(object.Signature)
 		return obj
 	case *payload.WithdrawFromSideChain:
 		obj := new(WithdrawFromSideChainInfo)
@@ -1332,6 +1459,11 @@ func getPayloadInfo(p Payload) PayloadInfo {
 	case *payload.ProcessProducer:
 		obj := new(CancelProducerInfo)
 		obj.OwnerPublicKey = common.BytesToHexString(object.OwnerPublicKey)
+		obj.Signature = common.BytesToHexString(object.Signature)
+		return obj
+	case *payload.ActivateProducer:
+		obj := new(ActivateProducerInfo)
+		obj.NodePublicKey = common.BytesToHexString(object.NodePublicKey)
 		obj.Signature = common.BytesToHexString(object.Signature)
 		return obj
 	}
@@ -1376,10 +1508,7 @@ func VerifyAndSendTx(tx *Transaction) error {
 }
 
 func ResponsePack(errCode ErrCode, result interface{}) map[string]interface{} {
-	if errCode != 0 && (result == "" || result == nil) {
-		result = ErrMap[errCode]
-	}
-	return map[string]interface{}{"Result": result, "Error": errCode}
+	return map[string]interface{}{"result": result, "status": errCode}
 }
 
 func GetHistory(param Params) map[string]interface{} {
@@ -1422,43 +1551,43 @@ func GetHistory(param Params) map[string]interface{} {
 func CreateTx(param Params) map[string]interface{} {
 	inputs, ok := param["inputs"].([]interface{})
 	if !ok {
-		return ResponsePack(InvalidParams, "Can not find inputs")
+		return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Can not find inputs")
 	}
 	var utxoList [][]*blockchain.UTXO
 	for _, v := range inputs {
 		input, ok := v.(string)
 		if !ok {
-			return ResponsePack(InvalidParams, "Not valid input value")
+			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Not valid input value")
 		}
 		programhash, err := common.Uint168FromAddress(input)
 		if err != nil {
-			return ResponsePack(InvalidParams, "Invalid address")
+			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Invalid address")
 		}
 		assetIDBytes, _ := FromReversedString("a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0")
 		assetID, err := common.Uint256FromBytes(assetIDBytes)
 		if err != nil {
-			return ResponsePack(InvalidParams, "")
+			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "")
 		}
 		utxos, err := blockchain2.DefaultChainStoreEx.GetUnspentFromProgramHash(*programhash, *assetID)
 		if err != nil {
-			return ResponsePack(InvalidParams, "Internal error")
+			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Internal error")
 		}
 		utxoList = append(utxoList, utxos)
 	}
 	outputs, ok := param["outputs"].([]interface{})
 	if !ok {
-		return ResponsePack(InvalidParams, "Can not find outputs")
+		return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Can not find outputs")
 	}
 	var smAmt int64
 	for _, v := range outputs {
 		output := v.(map[string]interface{})
 		_, ok := output["addr"].(string)
 		if !ok {
-			return ResponsePack(InvalidParams, "Can not find addr in output")
+			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Can not find addr in output")
 		}
 		amt, ok := output["amt"].(float64)
 		if !ok {
-			return ResponsePack(InvalidParams, "Can not find amt in output")
+			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 		}
 		smAmt += int64(amt)
 	}
@@ -1493,7 +1622,7 @@ func CreateTx(param Params) map[string]interface{} {
 		}
 	}
 	if !hasEnoughFee {
-		return ResponsePack(InvalidParams, "Not Enough UTXO")
+		return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 	}
 	utxoOutputsArray := make([]map[string]interface{}, 0)
 	for _, v := range outputs {
@@ -1513,7 +1642,7 @@ func CreateTx(param Params) map[string]interface{} {
 	txListMap["UTXOInputs"] = utxoInputsArray
 	txListMap["Outputs"] = utxoOutputsArray
 	txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
-	return ResponsePack(Success, paraListMap)
+	return ResponsePack(ELEPHANT_SUCCESS, paraListMap)
 }
 
 func GetCmcPrice(param Params) map[string]interface{} {

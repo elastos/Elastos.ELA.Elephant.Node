@@ -1,12 +1,15 @@
 {
   "Configuration": {
-    "ActiveNet": "testnet",
-    "HttpInfoPort": 21333,
+    "ActiveNet": "mainnet",
+    "HttpInfoPort": 20333,
     "HttpInfoStart": true,
-    "HttpRestPort": 21334,
-    "HttpWsPort": 21335,
-    "HttpJsonPort": 21336,
-    "NodePort": 21338,
+    "HttpRestPort": 20334,
+    "HttpRestStart": true,
+    "HttpWsPort": 20335,
+    "HttpWsStart":true,
+    "HttpJsonPort": 20336,
+    "EnableRPC": true,
+    "NodePort": 20338,
     "PrintLevel": 1,
     "PowConfiguration": {
       "PayToAddr": "EeEkSiRMZqg5rd9a2yPaWnvdPcikFtsrjE",
@@ -14,10 +17,10 @@
       "MinTxFee": 100
     },
     "RpcConfiguration": {
-      "User": "",
-      "Pass": "",
+      "User": "clark",
+      "Pass": "123456",
       "WhiteIPList": [
-        "0.0.0.0"
+        "127.0.0.1"
       ]
     }
   }

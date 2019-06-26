@@ -43,7 +43,7 @@ type WebSocketServer struct {
 	ActionMap   map[string]Handler
 }
 
-func StartServer() {
+func Start() {
 	events.Subscribe(func(e *events.Event) {
 		switch e.Type {
 		case events.ETBlockConnected:
@@ -268,7 +268,9 @@ func SendBlock2WSclient(v interface{}) {
 	//}
 	b, ok := v.(*Block)
 	if ok {
-		log.Infof("WS Receiving Block :%d", b.Height)
+		if b.Height%1000 == 0 {
+			log.Infof("WS Receiving Block :%d", b.Height)
+		}
 		blockchain.DefaultChainStoreEx.AddTask(b)
 	}
 	if PushRawBlockFlag {

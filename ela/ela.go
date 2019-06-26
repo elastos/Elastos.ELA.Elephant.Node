@@ -2,12 +2,15 @@ package ela
 
 import (
 	"bytes"
+	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httpjsonrpc"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httpnodeinfo"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httprestful"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httpwebsocket"
+	"github.com/elastos/Elastos.ELA/utils"
+	"github.com/urfave/cli"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,13 +20,15 @@ import (
 
 	"github.com/elastos/Elastos.ELA/blockchain"
 	cmdcom "github.com/elastos/Elastos.ELA/cmd/common"
-	"github.com/elastos/Elastos.ELA/common/config"
 	"github.com/elastos/Elastos.ELA/common/log"
 	"github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/dpos"
+	"github.com/elastos/Elastos.ELA/dpos/account"
+	dlog "github.com/elastos/Elastos.ELA/dpos/log"
 	"github.com/elastos/Elastos.ELA/dpos/state"
 	"github.com/elastos/Elastos.ELA/dpos/store"
 	"github.com/elastos/Elastos.ELA/elanet"
+	"github.com/elastos/Elastos.ELA/elanet/routes"
 	"github.com/elastos/Elastos.ELA/mempool"
 	"github.com/elastos/Elastos.ELA/p2p"
 	"github.com/elastos/Elastos.ELA/p2p/msg"
@@ -33,20 +38,99 @@ import (
 )
 
 var (
+	// Build version generated when build program.
+	Version string
+
+	// The go source code version at build.
+	GoVersion string
+
 	// printStateInterval is the interval to print out peer-to-peer network
 	// state.
 	printStateInterval = time.Minute
 )
 
 func Go(Version, GoVersion string) {
-	// Use all processor cores.
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	Version = Version
+	GoVersion = GoVersion
+	if err := setupNode().Run(os.Args); err != nil {
+		cmdcom.PrintErrorMsg(err.Error())
+		os.Exit(1)
+	}
+}
 
-	// Block and transaction processing can cause bursty allocations.  This
-	// limits the garbage collector from excessively overallocating during
-	// bursts.  This value was arrived at with the help of profiling live
-	// usage.
-	debug.SetGCPercent(10)
+func setupNode() *cli.App {
+	app := cli.NewApp()
+	app.Name = "ela"
+	app.Version = Version
+	app.HelpName = "ela"
+	app.Usage = "ela node for elastos blockchain"
+	app.UsageText = "ela [options] [args]"
+	app.Flags = []cli.Flag{
+		cmdcom.ConfigFileFlag,
+		cmdcom.DataDirFlag,
+		cmdcom.AccountPasswordFlag,
+	}
+	app.Action = func(c *cli.Context) {
+		setupConfig(c)
+		setupLog(c)
+		startNode(c)
+	}
+	app.Before = func(c *cli.Context) error {
+		// Use all processor cores.
+		runtime.GOMAXPROCS(runtime.NumCPU())
+
+		// Block and transaction processing can cause bursty allocations.  This
+		// limits the garbage collector from excessively overallocating during
+		// bursts.  This value was arrived at with the help of profiling live
+		// usage.
+		debug.SetGCPercent(10)
+
+		return nil
+	}
+
+	return app
+}
+
+func setupConfig(c *cli.Context) {
+	configPath := c.String("conf")
+	var err error
+	file, err := loadConfigFile(configPath)
+	if err != nil {
+		if c.IsSet("conf") {
+			cmdcom.PrintErrorMsg(err.Error())
+			os.Exit(1)
+		}
+		file = &defaultConfig
+	}
+
+	cfg, err = loadConfigParams(file)
+	if err != nil {
+		cmdcom.PrintErrorMsg(err.Error())
+		os.Exit(1)
+	}
+}
+
+func startNode(c *cli.Context) {
+
+	// Enable http profiling server if requested.
+	if cfg.ProfilePort != 0 {
+		go utils.StartPProf(cfg.ProfilePort)
+	}
+
+	flagDataDir := c.String("datadir")
+	dataDir := filepath.Join(flagDataDir, dataPath)
+
+	var act account.Account
+	if cfg.DPoSConfiguration.EnableArbiter {
+		password, err := cmdcom.GetFlagPassword(c)
+		if err != nil {
+			printErrorAndExit(err)
+		}
+		act, err = account.Open(password)
+		if err != nil {
+			printErrorAndExit(err)
+		}
+	}
 
 	log.Infof("Node version: %s", Version)
 	log.Info(GoVersion)
@@ -79,13 +163,33 @@ func Go(Version, GoVersion string) {
 	}
 	defer dposStore.Close()
 
-	txMemPool := mempool.NewTxPool()
+	txMemPool := mempool.NewTxPool(activeNetParams)
 	blockMemPool := mempool.NewBlockPool(activeNetParams)
 	blockMemPool.Store = chainStore
 
 	blockchain.DefaultLedger = &ledger // fixme
 
-	arbiters, err := state.NewArbitrators(activeNetParams, chainStore.GetHeight)
+	arbiters, err := state.NewArbitrators(activeNetParams, nil,
+		chainStore.GetHeight, func() (*types.Block, error) {
+			hash := chainStore.GetCurrentBlockHash()
+			block, err := chainStore.GetBlock(hash)
+			if err != nil {
+				return nil, err
+			}
+			blockchain.CalculateTxsFee(block)
+			return block, nil
+		}, func(height uint32) (*types.Block, error) {
+			hash, err := chainStore.GetBlockHash(height)
+			if err != nil {
+				return nil, err
+			}
+			block, err := chainStore.GetBlock(hash)
+			if err != nil {
+				return nil, err
+			}
+			blockchain.CalculateTxsFee(block)
+			return block, nil
+		})
 	if err != nil {
 		printErrorAndExit(err)
 	}
@@ -98,53 +202,57 @@ func Go(Version, GoVersion string) {
 	ledger.Blockchain = chain // fixme
 	blockMemPool.Chain = chain
 
-	// initialize producer state after arbiters has initialized
-	if err = chain.InitializeProducersState(interrupt.C, pgBar.Start,
-		pgBar.Increase); err != nil {
-		printErrorAndExit(err)
+	routesCfg := &routes.Config{TimeSource: chain.TimeSource}
+	if act != nil {
+		routesCfg.PID = act.PublicKeyBytes()
+		routesCfg.Addr = fmt.Sprintf("%s:%d",
+			cfg.DPoSConfiguration.IPAddress,
+			cfg.DPoSConfiguration.DPoSPort)
+		routesCfg.Sign = act.Sign
 	}
-	pgBar.Stop()
 
-	log.Info("Start the P2P networks")
+	route := routes.New(routesCfg)
 	server, err := elanet.NewServer(dataDir, &elanet.Config{
-		Chain:        chain,
-		ChainParams:  activeNetParams,
-		TxMemPool:    txMemPool,
-		BlockMemPool: blockMemPool,
+		Chain:          chain,
+		ChainParams:    activeNetParams,
+		PermanentPeers: cfg.PermanentPeers,
+		TxMemPool:      txMemPool,
+		BlockMemPool:   blockMemPool,
+		Routes:         route,
 	})
 	if err != nil {
 		printErrorAndExit(err)
 	}
-	server.Start()
-	defer server.Stop()
-
+	routesCfg.IsCurrent = server.IsCurrent
+	routesCfg.RelayAddr = server.RelayInventory
 	blockMemPool.IsCurrent = server.IsCurrent
-	if config.Parameters.EnableArbiter {
-		log.Info("Start the manager")
-		pwd, err := cmdcom.GetFlagPassword()
-		if err != nil {
-			printErrorAndExit(err)
-		}
-		arbitrator, err := dpos.NewArbitrator(pwd, dpos.Config{
-			EnableEventLog: true,
-			EnableEventRecord: config.Parameters.ArbiterConfiguration.
-				EnableEventRecord,
-			Params:       cfg.ArbiterConfiguration,
-			ChainParams:  activeNetParams,
-			Arbitrators:  arbiters,
-			Store:        dposStore,
-			TxMemPool:    txMemPool,
-			BlockMemPool: blockMemPool,
+
+	var arbitrator *dpos.Arbitrator
+	if act != nil {
+		dcfg := cfg.DPoSConfiguration
+		dlog.Init(dcfg.PrintLevel, dcfg.MaxPerLogSize, dcfg.MaxLogsSize)
+		arbitrator, err = dpos.NewArbitrator(act, dpos.Config{
+			EnableEventLog:    true,
+			EnableEventRecord: false,
+			Localhost:         cfg.DPoSConfiguration.IPAddress,
+			ChainParams:       activeNetParams,
+			Arbitrators:       arbiters,
+			Store:             dposStore,
+			Server:            server,
+			TxMemPool:         txMemPool,
+			BlockMemPool:      blockMemPool,
 			Broadcast: func(msg p2p.Message) {
 				server.BroadcastMessage(msg)
 			},
+			AnnounceAddr: route.AnnounceAddr,
 		})
 		if err != nil {
 			printErrorAndExit(err)
 		}
-		defer arbitrator.Stop()
-		arbitrator.Start()
+		routesCfg.OnCipherAddr = arbitrator.OnCipherAddr
 		servers.Arbiter = arbitrator
+		arbitrator.Start()
+		defer arbitrator.Stop()
 	}
 
 	servers.Compile = Version
@@ -168,11 +276,28 @@ func Go(Version, GoVersion string) {
 		Arbitrators: arbiters,
 	})
 
+	// initialize producer state after arbiters has initialized.
+	if err = chain.InitProducerState(interrupt.C, pgBar.Start,
+		pgBar.Increase); err != nil {
+		printErrorAndExit(err)
+	}
+	pgBar.Stop()
+
+	log.Info("Start the P2P networks")
+	server.Start()
+	defer server.Stop()
+
 	log.Info("Start services")
-	go httpjsonrpc.StartRPCServer()
-	go httprestful.StartServer()
-	go httpwebsocket.StartServer()
-	if config.Parameters.HttpInfoStart {
+	if cfg.EnableRPC {
+		go httpjsonrpc.StartRPCServer()
+	}
+	if cfg.HttpRestStart {
+		go httprestful.StartServer()
+	}
+	if cfg.HttpWsStart {
+		go httpwebsocket.Start()
+	}
+	if cfg.HttpInfoStart {
 		go httpnodeinfo.StartServer()
 	}
 
@@ -183,7 +308,7 @@ func Go(Version, GoVersion string) {
 		return
 	}
 	log.Info("Start consensus")
-	if config.Parameters.PowConfiguration.AutoMining {
+	if cfg.PowConfiguration.AutoMining {
 		log.Info("Start POW Services")
 		go servers.Pow.Start()
 	}

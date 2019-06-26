@@ -3,7 +3,10 @@ package ela
 import (
 	"fmt"
 	"github.com/cheggaaa/pb"
+	"github.com/elastos/Elastos.ELA/elanet/routes"
+	"github.com/urfave/cli"
 	"io"
+	"path/filepath"
 	"time"
 
 	"github.com/elastos/Elastos.ELA/common/log"
@@ -154,24 +157,31 @@ func newProgress(w io.Writer) *progress {
 // means the package will not perform any logging by default until the caller
 // requests it.
 var (
-	logger = log.NewDefault(cfg.PrintLevel, cfg.MaxPerLogSize, cfg.MaxLogsSize)
-	pgBar  = newProgress(logger.Writer())
-	level  = elalog.Level(cfg.PrintLevel)
-
-	admrlog = wrap(logger, elalog.LevelOff)
-	cmgrlog = wrap(logger, elalog.LevelOff)
-	synclog = wrap(logger, level)
-	peerlog = wrap(logger, level)
-	elanlog = wrap(logger, level)
-	statlog = wrap(logger, level)
+	logger *log.Logger
+	pgBar  *progress
 )
 
 // The default amount of logging is none.
-func init() {
+func setupLog(c *cli.Context) {
+	flagDataDir := c.String("datadir")
+	path := filepath.Join(flagDataDir, nodeLogPath)
+
+	logger = log.NewDefault(path, uint8(cfg.PrintLevel), cfg.MaxPerLogSize, cfg.MaxLogsSize)
+	pgBar = newProgress(logger.Writer())
+
+	admrlog := wrap(logger, elalog.LevelOff)
+	cmgrlog := wrap(logger, elalog.LevelOff)
+	synclog := wrap(logger, cfg.PrintLevel)
+	peerlog := wrap(logger, cfg.PrintLevel)
+	routlog := wrap(logger, cfg.PrintLevel)
+	elanlog := wrap(logger, cfg.PrintLevel)
+	statlog := wrap(logger, cfg.PrintLevel)
+
 	addrmgr.UseLogger(admrlog)
 	connmgr.UseLogger(cmgrlog)
 	netsync.UseLogger(synclog)
 	peer.UseLogger(peerlog)
+	routes.UseLogger(routlog)
 	elanet.UseLogger(elanlog)
 	state.UseLogger(statlog)
 }

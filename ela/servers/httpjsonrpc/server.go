@@ -5,16 +5,17 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"io/ioutil"
+	"mime"
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 
-	. "github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers"
 	"github.com/elastos/Elastos.ELA/common/config"
 	"github.com/elastos/Elastos.ELA/common/log"
 	elaErr "github.com/elastos/Elastos.ELA/errors"
+	. "github.com/elastos/Elastos.ELA/servers"
 )
 
 //an instance of the multiplexer
@@ -28,15 +29,20 @@ const (
 	InvalidParams  = -32602
 	InternalError  = -32603
 	//-32000 to -32099	Server error, waiting for defining
+
+	// IOTimeout is the maximum duration for JSON-RPC reading or writing
+	// timeout.
+	IOTimeout = 60 * time.Second
 )
 
 func StartRPCServer() {
 	mainMux = make(map[string]func(Params) map[string]interface{})
 
-	http.HandleFunc("/", Handle)
-
+	mainMux["setloglevel"] = SetLogLevel
 	mainMux["getinfo"] = GetInfo
 	mainMux["getblock"] = GetBlockByHash
+	mainMux["getconfirmbyheight"] = GetConfirmByHeight
+	mainMux["getconfirmbyhash"] = GetConfirmByHash
 	mainMux["getcurrentheight"] = GetBlockHeight
 	mainMux["getblockhash"] = GetBlockHash
 	mainMux["getconnectioncount"] = GetConnectionCount
@@ -51,29 +57,51 @@ func StartRPCServer() {
 	mainMux["getblockbyheight"] = GetBlockByHeight
 	mainMux["getexistwithdrawtransactions"] = GetExistWithdrawTransactions
 	mainMux["listunspent"] = ListUnspent
+	mainMux["getutxosbyamount"] = GetUTXOsByAmount
+	mainMux["getamountbyinputs"] = GetAmountByInputs
 	mainMux["getreceivedbyaddress"] = GetReceivedByAddress
-
+	// aux interfaces
+	mainMux["help"] = AuxHelp
+	mainMux["submitauxblock"] = SubmitAuxBlock
+	mainMux["createauxblock"] = CreateAuxBlock
+	// mining interfaces
+	mainMux["togglemining"] = ToggleMining
+	mainMux["discretemining"] = DiscreteMining
 	// vote interfaces
 	mainMux["listproducers"] = ListProducers
 	mainMux["producerstatus"] = ProducerStatus
 	mainMux["votestatus"] = VoteStatus
+	// for cross-chain arbiter
+	mainMux["submitsidechainillegaldata"] = SubmitSidechainIllegalData
+	mainMux["getarbiterpeersinfo"] = GetArbiterPeersInfo
+
 	mainMux["estimatesmartfee"] = EstimateSmartFee
 	mainMux["getdepositcoin"] = GetDepositCoin
+	mainMux["getarbitersinfo"] = GetArbitersInfo
 
-	err := http.ListenAndServe(":"+strconv.Itoa(config.Parameters.HttpJsonPort), nil)
+	rpcServeMux := http.NewServeMux()
+	server := http.Server{
+		Handler:      rpcServeMux,
+		ReadTimeout:  IOTimeout,
+		WriteTimeout: IOTimeout,
+	}
+	rpcServeMux.HandleFunc("/", Handle)
+	l, _ := net.Listen("tcp4", ":"+strconv.Itoa(config.Parameters.HttpJsonPort))
+	err := server.Serve(l)
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err.Error())
+		log.Fatal("ListenAndServe error: ", err.Error())
 	}
 }
 
 //this is the function that should be called in order to answer an rpc call
 //should be registered like "http.AddMethod("/", httpjsonrpc.Handle)"
 func Handle(w http.ResponseWriter, r *http.Request) {
+
 	//JSON RPC commands should be POSTs
 	isClientAllowed := clientAllowed(r)
 	if !isClientAllowed {
 		log.Warn("HTTP Client ip is not allowd")
-		http.Error(w, "Client ip is not allowd", http.StatusNetworkAuthenticationRequired)
+		http.Error(w, "Client ip is not allowd", http.StatusForbidden)
 		return
 	}
 
@@ -82,16 +110,16 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "JSON RPC protocol only allows POST method", http.StatusMethodNotAllowed)
 		return
 	}
-
-	if r.Header["Content-Type"][0] != "application/json" {
+	contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if contentType != "application/json" {
 		http.Error(w, "need content type to be application/json", http.StatusUnsupportedMediaType)
 		return
 	}
 
-	isCheckAuthOk, err := checkAuth(r)
+	isCheckAuthOk := checkAuth(r)
 	if !isCheckAuthOk {
-		log.Warn(err.Error())
-		http.Error(w, err.Error(), http.StatusNetworkAuthenticationRequired)
+		log.Warn("client authenticate failed")
+		RPCError(w, http.StatusUnauthorized, InternalError, "client authenticate failed")
 		return
 	}
 
@@ -117,9 +145,9 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestParams := request["params"]
-	// Json rpc 1.0 support positional config.Parameters while json rpc 2.0 support named config.Parameters.
-	// positional config.Parameters: { "requestParams":[1, 2, 3....] }
-	// named config.Parameters: { "requestParams":{ "a":1, "b":2, "c":3 } }
+	// Json rpc 1.0 support positional parameters while json rpc 2.0 support named parameters.
+	// positional parameters: { "requestParams":[1, 2, 3....] }
+	// named parameters: { "requestParams":{ "a":1, "b":2, "c":3 } }
 	// Here we support both of them.
 	var params Params
 	switch requestParams := requestParams.(type) {
@@ -132,6 +160,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		RPCError(w, http.StatusBadRequest, InvalidRequest, "params format error, must be an array or a map")
 		return
 	}
+	log.Debug("RPC method:", requestMethod)
 	log.Debug("RPC params:", params)
 
 	response := method(params)
@@ -159,20 +188,16 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func clientAllowed(req *http.Request) bool {
-	log.Debugf("RemoteAddr %s \n", req.RemoteAddr)
-	log.Debugf("WhiteIPList %v \n", config.Parameters.RpcConfiguration.WhiteIPList)
-
+func clientAllowed(r *http.Request) bool {
 	//this ipAbbr  may be  ::1 when request is localhost
-	ipAbbr, _, err := net.SplitHostPort(req.RemoteAddr)
+	ipAbbr, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		log.Errorf("RemoteAddr clientAllowed SplitHostPort failure %s \n", req.RemoteAddr)
+		log.Errorf("RemoteAddr clientAllowed SplitHostPort failure %s \n", r.RemoteAddr)
 		return false
 
 	}
 	//after ParseIP ::1 chg to 0:0:0:0:0:0:0:1 the true ip
 	remoteIp := net.ParseIP(ipAbbr)
-	log.Debugf("RemoteAddr clientAllowed remoteIp %s \n", remoteIp.String())
 
 	if remoteIp == nil {
 		log.Errorf("clientAllowed ParseIP ipAbbr %s failure  \n", ipAbbr)
@@ -180,7 +205,6 @@ func clientAllowed(req *http.Request) bool {
 	}
 
 	if remoteIp.IsLoopback() {
-		log.Debugf("remoteIp %s IsLoopback\n", remoteIp)
 		return true
 	}
 
@@ -194,21 +218,17 @@ func clientAllowed(req *http.Request) bool {
 		}
 
 	}
-	log.Debugf("RemoteAddr clientAllowed failure %s \n", req.RemoteAddr)
 	return false
 }
 
-func checkAuth(r *http.Request) (bool, error) {
-
-	log.Debugf("checkAuth PowConfiguration %+v", config.Parameters.RpcConfiguration)
-
-	if (config.Parameters.RpcConfiguration.User == config.Parameters.RpcConfiguration.Pass) && (len(config.Parameters.RpcConfiguration.User) == 0) {
-		return true, nil
+func checkAuth(r *http.Request) bool {
+	if (config.Parameters.RpcConfiguration.User == config.Parameters.RpcConfiguration.Pass) &&
+		(len(config.Parameters.RpcConfiguration.User) == 0) {
+		return true
 	}
 	authHeader := r.Header["Authorization"]
 	if len(authHeader) <= 0 {
-		log.Warnf("checkAuth RPC authentication failure from %s", r.RemoteAddr)
-		return false, errors.New("checkAuth failure Authorization empty")
+		return false
 	}
 
 	authSha256 := sha256.Sum256([]byte(authHeader[0]))
@@ -219,12 +239,11 @@ func checkAuth(r *http.Request) (bool, error) {
 
 	resultCmp := subtle.ConstantTimeCompare(authSha256[:], cfgAuthSha256[:])
 	if resultCmp == 1 {
-		return true, nil
+		return true
 	}
 
 	// Request's auth doesn't match  user
-	log.Warnf("checkAuth RPC authentication failure from %s", r.RemoteAddr)
-	return false, errors.New("checkAuth failure Authorization username or password error")
+	return false
 }
 
 func RPCError(w http.ResponseWriter, httpStatus int, code elaErr.ErrCode, message string) {
