@@ -1508,17 +1508,24 @@ func VerifyAndSendTx(tx *Transaction) error {
 }
 
 func ResponsePack(errCode ErrCode, result interface{}) map[string]interface{} {
+	if errCode != 0 && (result == "" || result == nil) {
+		result = ErrMap[errCode]
+	}
+	return map[string]interface{}{"Result": result, "Error": errCode}
+}
+
+func ResponsePackEx(errCode ErrCode, result interface{}) map[string]interface{} {
 	return map[string]interface{}{"result": result, "status": errCode}
 }
 
 func GetHistory(param Params) map[string]interface{} {
 	addr, ok := param.String("addr")
 	if !ok {
-		return ResponsePack(InvalidParams, "")
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 	}
 	_, err := common.Uint168FromAddress(addr)
 	if err != nil {
-		return ResponsePack(InvalidParams, "")
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 	}
 	ok = param.HasKey("pageNum")
 	ok1 := param.HasKey("pageSize")
@@ -1528,66 +1535,66 @@ func GetHistory(param Params) map[string]interface{} {
 			History:  txhs,
 			TotalNum: txhs.Len(),
 		}
-		return ResponsePack(Success, thr)
+		return ResponsePackEx(ELEPHANT_SUCCESS, thr)
 	} else if ok && ok1 {
 		pageNum, cool := param.Uint("pageNum")
 		if !cool {
-			return ResponsePack(InvalidParams, "")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 		}
 		pageSize, cool := param.Uint("pageSize")
 		if !cool {
-			return ResponsePack(InvalidParams, "")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 		}
 		txhs, total := blockchain2.DefaultChainStoreEx.GetTxHistoryByPage(addr, pageNum, pageSize)
 		thr := types.ThResult{
 			History:  txhs,
 			TotalNum: total,
 		}
-		return ResponsePack(Success, thr)
+		return ResponsePackEx(ELEPHANT_SUCCESS, thr)
 	}
-	return ResponsePack(InvalidParams, "")
+	return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 }
 
 func CreateTx(param Params) map[string]interface{} {
 	inputs, ok := param["inputs"].([]interface{})
 	if !ok {
-		return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Can not find inputs")
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find inputs")
 	}
 	var utxoList [][]*blockchain.UTXO
 	for _, v := range inputs {
 		input, ok := v.(string)
 		if !ok {
-			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Not valid input value")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not valid input value")
 		}
 		programhash, err := common.Uint168FromAddress(input)
 		if err != nil {
-			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Invalid address")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid address")
 		}
 		assetIDBytes, _ := FromReversedString("a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0")
 		assetID, err := common.Uint256FromBytes(assetIDBytes)
 		if err != nil {
-			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 		}
 		utxos, err := blockchain2.DefaultChainStoreEx.GetUnspentFromProgramHash(*programhash, *assetID)
 		if err != nil {
-			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Internal error")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Internal error")
 		}
 		utxoList = append(utxoList, utxos)
 	}
 	outputs, ok := param["outputs"].([]interface{})
 	if !ok {
-		return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Can not find outputs")
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find outputs")
 	}
 	var smAmt int64
 	for _, v := range outputs {
 		output := v.(map[string]interface{})
 		_, ok := output["addr"].(string)
 		if !ok {
-			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Can not find addr in output")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find addr in output")
 		}
 		amt, ok := output["amt"].(float64)
 		if !ok {
-			return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 		}
 		smAmt += int64(amt)
 	}
@@ -1622,7 +1629,7 @@ func CreateTx(param Params) map[string]interface{} {
 		}
 	}
 	if !hasEnoughFee {
-		return ResponsePack(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 	}
 	utxoOutputsArray := make([]map[string]interface{}, 0)
 	for _, v := range outputs {
@@ -1642,7 +1649,7 @@ func CreateTx(param Params) map[string]interface{} {
 	txListMap["UTXOInputs"] = utxoInputsArray
 	txListMap["Outputs"] = utxoOutputsArray
 	txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
-	return ResponsePack(ELEPHANT_SUCCESS, paraListMap)
+	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
 }
 
 func GetCmcPrice(param Params) map[string]interface{} {
@@ -1654,7 +1661,7 @@ func GetCmcPrice(param Params) map[string]interface{} {
 	} else {
 		l, err = strconv.Atoi(limit)
 		if err != nil {
-			return ResponsePack(InvalidParams, "")
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 		}
 		if l > 2000 || l <= 0 {
 			l = 2000
@@ -1662,10 +1669,10 @@ func GetCmcPrice(param Params) map[string]interface{} {
 	}
 	cmcs := blockchain2.DefaultChainStoreEx.GetCmcPrice()
 	if len(cmcs.C) < l {
-		return ResponsePack(Error, " Cmc Price is not ready yet")
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, " Cmc Price is not ready yet")
 	}
 	cmcs = types.Cmcs{
 		C: cmcs.C[:int64(l)],
 	}
-	return ResponsePack(Success, cmcs.C)
+	return ResponsePackEx(ELEPHANT_SUCCESS, cmcs.C)
 }

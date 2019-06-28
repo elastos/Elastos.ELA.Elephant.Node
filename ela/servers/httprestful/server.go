@@ -37,8 +37,14 @@ const (
 	//extended
 	ApiGetHistory = "/api/1/history/:addr"
 	ApiCreateTx   = "/api/1/createTx"
-	APiCmc        = "/api/1/cmc"
+	ApiCmc        = "/api/1/cmc"
 )
+
+var ext_api_handle = map[string]bool{
+	ApiGetHistory: true,
+	ApiCreateTx:   true,
+	ApiCmc:        true,
+}
 
 type Action struct {
 	sync.RWMutex
@@ -119,9 +125,8 @@ func (rt *restServer) initializeMethod() {
 
 		// extended
 		ApiGetHistory: {name: "gethistory", handler: servers.GetHistory},
-		APiCmc:        {name: "cmc", handler: servers.GetCmcPrice},
+		ApiCmc:        {name: "cmc", handler: servers.GetCmcPrice},
 	}
-
 	postMethodMap := map[string]Action{
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
 		// extended
@@ -207,8 +212,7 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 		req["addr"] = getParam(r, "addr")
 		getQueryParam(r, req)
 	case ApiCreateTx:
-		getReqBodyParam(r, req)
-	case APiCmc:
+	case ApiCmc:
 		getQueryParam(r, req)
 	}
 	return req
@@ -228,7 +232,11 @@ func (rt *restServer) initGetHandler() {
 				req = rt.getParams(r, url, req)
 				resp = h.handler(req)
 			} else {
-				resp = servers.ResponsePack(InvalidMethod, "")
+				if _, ok = ext_api_handle[k]; !ok {
+					resp = servers.ResponsePack(InvalidMethod, "")
+				} else {
+					resp = servers.ResponsePackEx(InvalidMethod, "")
+				}
 			}
 			rt.response(w, resp)
 		})
@@ -251,10 +259,18 @@ func (rt *restServer) initPostHandler() {
 					req = rt.getParams(r, url, req)
 					resp = h.handler(req)
 				} else {
-					resp = servers.ResponsePack(IllegalDataFormat, "")
+					if _, ok = ext_api_handle[k]; !ok {
+						resp = servers.ResponsePack(InvalidMethod, "")
+					} else {
+						resp = servers.ResponsePackEx(InvalidMethod, "")
+					}
 				}
 			} else {
-				resp = servers.ResponsePack(InvalidMethod, "")
+				if _, ok = ext_api_handle[k]; !ok {
+					resp = servers.ResponsePack(InvalidMethod, "")
+				} else {
+					resp = servers.ResponsePackEx(InvalidMethod, "")
+				}
 			}
 			rt.response(w, resp)
 		})

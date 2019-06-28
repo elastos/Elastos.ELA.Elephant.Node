@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"time"
 
+	. "github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers"
 	"github.com/elastos/Elastos.ELA/common/config"
 	"github.com/elastos/Elastos.ELA/common/log"
 	elaErr "github.com/elastos/Elastos.ELA/errors"
-	. "github.com/elastos/Elastos.ELA/servers"
 )
 
 //an instance of the multiplexer
@@ -165,6 +165,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 	response := method(params)
 	var data []byte
+	data, _ = json.Marshal(response)
 	if response["Error"] != elaErr.ErrCode(0) {
 		data, _ = json.Marshal(map[string]interface{}{
 			"jsonrpc": "2.0",
