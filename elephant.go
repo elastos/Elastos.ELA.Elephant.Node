@@ -1,14 +1,14 @@
-package ela
+package main
 
 import (
 	"bytes"
 	"fmt"
-	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/ela/blockchain"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httpjsonrpc"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httpnodeinfo"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httprestful"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/servers/httpwebsocket"
+	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/servers"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httpjsonrpc"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httpnodeinfo"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httprestful"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httpwebsocket"
 	"github.com/elastos/Elastos.ELA/utils"
 	"github.com/urfave/cli"
 	"os"

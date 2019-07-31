@@ -2,12 +2,9 @@
 glide.lock
 /vendor/*
 elastos/
-elastos_did/
 /ela-cli
 /tmp
-elephant
 nohup.out
 **/_build
 **/_static
-elastos.tar
-elastos_did.tar
+*.tar

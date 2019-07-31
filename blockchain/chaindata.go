@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	common2 "github.com/elastos/Elastos.ELA.Elephant.Node/common"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/core/types"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/log"
 	"io/ioutil"

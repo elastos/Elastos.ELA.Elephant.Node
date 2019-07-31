@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"bytes"
-	"github.com/elastos/Elastos.ELA.Elephant.Node/ela/core/types"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
 	"github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/config"

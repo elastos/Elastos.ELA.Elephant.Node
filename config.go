@@ -1,4 +1,4 @@
-package ela
+package main
 
 import (
 	"bytes"
