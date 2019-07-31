@@ -8,7 +8,7 @@ import (
 
 const (
 	CMC_ENDPOINT_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=%d&convert=%s"
-	BGX_ENDPOINT_URL = "https://www.gaex.com/svc/portal/api/v2/publicinfo"
+	HBG_ENDPOINT_URL = "https://api.huobi.pro/market/history/trade?symbol=elabtc"
 )
 
 type Status struct {
