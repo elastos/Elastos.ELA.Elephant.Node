@@ -64,7 +64,6 @@ func (c ChainStoreExtend) doPersistTransactionHistory(history types.TransactionH
 }
 
 func (c ChainStoreExtend) initCmc() {
-	log.Info("cmc here ")
 	c.AddFunc("@every "+common2.Conf.Cmc.Inteval, c.renewCmcPrice)
 	c.Start()
 }
@@ -187,7 +186,9 @@ func (c ChainStoreExtend) saveToDb(cmcResponseUSD, cmcResponseCNY, cmcResponseBT
 		cmc.Num_market_pairs = strconv.Itoa(int(data[i].Num_market_pairs))
 		cmcs = append(cmcs, cmc)
 	}
-	c.persistCmc(types.Cmcs{cmcs})
+	if len(cmcs) > 0 {
+		c.persistCmc(types.Cmcs{cmcs})
+	}
 	return nil
 }
 
