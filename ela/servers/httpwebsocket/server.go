@@ -271,7 +271,7 @@ func SendBlock2WSclient(v interface{}) {
 		if b.Height%1000 == 0 {
 			log.Infof("WS Receiving Block :%d", b.Height)
 		}
-		blockchain.DefaultChainStoreEx.AddTask(b)
+		go blockchain.DefaultChainStoreEx.AddTask(b)
 	}
 	if PushRawBlockFlag {
 		go func() {

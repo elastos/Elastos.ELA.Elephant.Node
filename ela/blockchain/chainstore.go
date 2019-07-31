@@ -47,7 +47,7 @@ func NewChainStoreEx(chainstore IChainStore, filePath string) (ChainStoreExtend,
 	c := ChainStoreExtend{
 		IChainStore: chainstore,
 		IStore:      st,
-		taskChEx:    make(chan interface{}, TaskChanCap),
+		taskChEx:    make(chan interface{}, 1000),
 		quitEx:      make(chan chan bool, 1),
 		Cron:        cron.New(),
 		mu:          sync.Mutex{},
@@ -96,7 +96,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				}
 			}
 			for i := 0; i < len(txhscoinbase); i++ {
-				txhscoinbase[i].Outputs = to
+				txhscoinbase[i].Outputs = []common2.Uint168{txhscoinbase[i].Address}
 				txhscoinbase[i].Value = hold[txhscoinbase[i].Address]
 			}
 			txhs = append(txhs, txhscoinbase...)
@@ -187,7 +187,13 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				var realFee uint64 = uint64(fee)
 				if transferType == INCOME {
 					realFee = 0
+					to = []common2.Uint168{k}
 				}
+
+				if transferType == SPEND {
+					from = []common2.Uint168{k}
+				}
+
 				txh := types.TransactionHistory{}
 				txh.Value = uint64(value)
 				txh.Address = k
@@ -207,7 +213,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 				txh := types.TransactionHistory{}
 				txh.Value = uint64(r)
 				txh.Address = k
-				txh.Inputs = from
+				txh.Inputs = []common2.Uint168{k}
 				txh.TxType = tx.TxType
 				txh.Txid = tx.Hash()
 				txh.Height = uint64(block.Height)
