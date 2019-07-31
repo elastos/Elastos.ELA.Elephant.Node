@@ -30,7 +30,3 @@ Contents
    :maxdepth: 2
    
    overview_and_guide.rst
-   restful_guide.rst
-   jsonrpc_guide.rst
-   websocket_guide.rst
-   nodeinfo_guide.rst
