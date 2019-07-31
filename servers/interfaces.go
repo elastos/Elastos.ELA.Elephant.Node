@@ -650,6 +650,28 @@ func SendRawTransaction(param Params) map[string]interface{} {
 	return ResponsePack(Success, ToReversedString(txn.Hash()))
 }
 
+func SendRawTx(param Params) map[string]interface{} {
+	str, ok := param.String("data")
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "need a string parameter named data")
+	}
+
+	bys, err := common.HexStringToBytes(str)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "hex string to bytes error")
+	}
+	var txn Transaction
+	if err := txn.Deserialize(bytes.NewReader(bys)); err != nil {
+		return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
+	}
+
+	if err := VerifyAndSendTx(&txn); err != nil {
+		return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
+	}
+
+	return ResponsePackEx(ELEPHANT_SUCCESS, ToReversedString(txn.Hash()))
+}
+
 func GetBlockHeight(param Params) map[string]interface{} {
 	return ResponsePack(Success, Store.GetHeight())
 }
@@ -805,6 +827,26 @@ func GetBalanceByAddr(param Params) map[string]interface{} {
 		}
 	}
 	return ResponsePack(Success, balance.String())
+}
+
+func GetBalance(param Params) map[string]interface{} {
+	str, ok := param.String("addr")
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
+	}
+
+	programHash, err := common.Uint168FromAddress(str)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
+	}
+	unspends, err := Store.GetUnspentsFromProgramHash(*programHash)
+	var balance common.Fixed64 = 0
+	for _, u := range unspends {
+		for _, v := range u {
+			balance = balance + v.Value
+		}
+	}
+	return ResponsePackEx(ELEPHANT_SUCCESS, balance.String())
 }
 
 func GetBalanceByAsset(param Params) map[string]interface{} {
