@@ -35,15 +35,17 @@ const (
 	ApiGetTransactionPool  = "/api/v1/transactionpool"
 
 	//extended
-	ApiGetHistory = "/api/1/history/:addr"
-	ApiCreateTx   = "/api/1/createTx"
-	ApiCmc        = "/api/1/cmc"
+	ApiGetHistory   = "/api/1/history/:addr"
+	ApiCreateTx     = "/api/1/createTx"
+	ApiCmc          = "/api/1/cmc"
+	ApiGetPublicKey = "/api/1/pubkey/:addr"
 )
 
 var ext_api_handle = map[string]bool{
-	ApiGetHistory: true,
-	ApiCreateTx:   true,
-	ApiCmc:        true,
+	ApiGetHistory:   true,
+	ApiCreateTx:     true,
+	ApiCmc:          true,
+	ApiGetPublicKey: true,
 }
 
 type Action struct {
@@ -124,8 +126,9 @@ func (rt *restServer) initializeMethod() {
 		ApiGetBalanceByAsset:   {name: "getbalancebyasset", handler: servers.GetBalanceByAsset},
 
 		// extended
-		ApiGetHistory: {name: "gethistory", handler: servers.GetHistory},
-		ApiCmc:        {name: "cmc", handler: servers.GetCmcPrice},
+		ApiGetHistory:   {name: "gethistory", handler: servers.GetHistory},
+		ApiCmc:          {name: "cmc", handler: servers.GetCmcPrice},
+		ApiGetPublicKey: {name: "cmc", handler: servers.GetPublicKey},
 	}
 	postMethodMap := map[string]Action{
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
@@ -160,6 +163,8 @@ func (rt *restServer) getPath(url string) string {
 		return ApiGetAsset
 	} else if strings.Contains(url, strings.TrimRight(ApiGetHistory, ":addr")) {
 		return ApiGetHistory
+	} else if strings.Contains(url, strings.TrimRight(ApiGetPublicKey, ":addr")) {
+		return ApiGetPublicKey
 	}
 	return url
 }
@@ -209,6 +214,9 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 	case ApiSendRawTransaction:
 
 	case ApiGetHistory:
+		req["addr"] = getParam(r, "addr")
+		getQueryParam(r, req)
+	case ApiGetPublicKey:
 		req["addr"] = getParam(r, "addr")
 		getQueryParam(r, req)
 	case ApiCreateTx:

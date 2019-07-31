@@ -49,9 +49,11 @@ var (
 	printStateInterval = time.Minute
 )
 
-func Go(Version, GoVersion string) {
-	Version = Version
-	GoVersion = GoVersion
+func main() {
+	var interrupt = signal.NewInterrupt()
+	defer func() {
+		<-interrupt.C
+	}()
 	if err := setupNode().Run(os.Args); err != nil {
 		cmdcom.PrintErrorMsg(err.Error())
 		os.Exit(1)

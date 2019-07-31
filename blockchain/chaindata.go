@@ -45,6 +45,35 @@ func (c ChainStoreExtend) persistTransactionHistory(txhs []types.TransactionHist
 	return nil
 }
 
+// key: DataEntryPrefix + height + address
+// value: serialized history
+func (c ChainStoreExtend) persistPbks(pbks map[common.Uint168][]byte) error {
+	c.begin()
+	for k, v := range pbks {
+		err := c.doPersistPbks(k, v)
+		if err != nil {
+			c.rollback()
+			log.Fatal("Error persist transaction history")
+			os.Exit(-1)
+		}
+	}
+	c.commit()
+	return nil
+}
+
+func (c ChainStoreExtend) doPersistPbks(k common.Uint168, pub []byte) error {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataPkPrefix))
+	err := k.Serialize(key)
+	if err != nil {
+		return err
+	}
+	value := new(bytes.Buffer)
+	common.WriteVarBytes(value, pub)
+	c.BatchPut(key.Bytes(), value.Bytes())
+	return nil
+}
+
 func (c ChainStoreExtend) doPersistTransactionHistory(history types.TransactionHistory) error {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataTxHistoryPrefix))

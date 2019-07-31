@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"bytes"
+	"encoding/hex"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
 	. "github.com/elastos/Elastos.ELA/blockchain"
@@ -65,6 +66,7 @@ func (c ChainStoreExtend) Close() {
 func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 	txs := block.Transactions
 	txhs := make([]types.TransactionHistory, 0)
+	pubks := make(map[common2.Uint168][]byte)
 	for i := 0; i < len(txs); i++ {
 		tx := txs[i]
 		var memo []byte
@@ -101,6 +103,15 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 			}
 			txhs = append(txhs, txhscoinbase...)
 		} else {
+			for _, program := range tx.Programs {
+				code := program.Code
+				programHash, err := common.GetProgramHash(code[1 : len(code)-1])
+				if err != nil {
+					continue
+				}
+				pubks[*programHash] = code[1 : len(code)-1]
+			}
+
 			isCrossTx := false
 			if tx.TxType == TransferCrossChainAsset {
 				isCrossTx = true
@@ -227,6 +238,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 		}
 	}
 	c.persistTransactionHistory(txhs)
+	c.persistPbks(pubks)
 	return nil
 }
 
@@ -235,7 +247,7 @@ func (c ChainStoreExtend) CloseEx() {
 	c.quitEx <- closed
 	<-closed
 	c.Stop()
-	println("stop")
+	log.Info("Extend chainStore shutting down")
 }
 
 func (c ChainStoreExtend) loop() {
@@ -299,4 +311,17 @@ func (c ChainStoreExtend) GetCmcPrice() types.Cmcs {
 	val.Write(buf)
 	cmcs.Deserialize(val)
 	return cmcs
+}
+
+func (c ChainStoreExtend) GetPublicKey(addr string) string {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataPkPrefix))
+	k, _ := common2.Uint168FromAddress(addr)
+	k.Serialize(key)
+	buf, err := c.Get(key.Bytes())
+	if err != nil {
+		log.Warn("No public key find")
+		return ""
+	}
+	return hex.EncodeToString(buf[1:])
 }

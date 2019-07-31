@@ -16,4 +16,5 @@ type IChainStoreExtend interface {
 	GetTxHistory(addr string) types.TransactionHistorySorter
 	GetTxHistoryByPage(addr string, pageNum, pageSize uint32) (types.TransactionHistorySorter, int)
 	GetCmcPrice() types.Cmcs
+	GetPublicKey(addr string) string
 }

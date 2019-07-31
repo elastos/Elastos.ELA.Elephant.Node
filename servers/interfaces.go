@@ -1555,6 +1555,23 @@ func GetHistory(param Params) map[string]interface{} {
 	return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 }
 
+func GetPublicKey(param Params) map[string]interface{} {
+	addr, ok := param.String("addr")
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
+	}
+	_, err := common.Uint168FromAddress(addr)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
+	}
+	publicKey := blockchain2.DefaultChainStoreEx.GetPublicKey(addr)
+	if publicKey == "" {
+		return ResponsePackEx(ELEPHANT_SUCCESS, "Can not find pubkey of this address, please using this address send a transaction first")
+	} else {
+		return ResponsePackEx(ELEPHANT_SUCCESS, publicKey)
+	}
+}
+
 func CreateTx(param Params) map[string]interface{} {
 	inputs, ok := param["inputs"].([]interface{})
 	if !ok {
