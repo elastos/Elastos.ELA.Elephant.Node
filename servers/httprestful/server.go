@@ -41,6 +41,7 @@ const (
 	ApiGetPublicKey = "/api/1/pubkey/:addr"
 	ApiGetBalance   = "/api/1/balance/:addr"
 	ApiSendRawTx    = "/api/1/sendRawTx"
+	ApiCreateVoteTx = "/api/1/createVoteTx"
 )
 
 var ext_api_handle = map[string]bool{
@@ -50,6 +51,7 @@ var ext_api_handle = map[string]bool{
 	ApiGetPublicKey: true,
 	ApiGetBalance:   true,
 	ApiSendRawTx:    true,
+	ApiCreateVoteTx: true,
 }
 
 type Action struct {
@@ -139,8 +141,9 @@ func (rt *restServer) initializeMethod() {
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
 
 		// extended
-		ApiCreateTx:  {name: "createTx", handler: servers.CreateTx},
-		ApiSendRawTx: {name: "sendRawTx", handler: servers.SendRawTx},
+		ApiCreateTx:     {name: "createTx", handler: servers.CreateTx},
+		ApiSendRawTx:    {name: "sendRawTx", handler: servers.SendRawTx},
+		ApiCreateVoteTx: {name: "createVoteTx", handler: servers.CreateVoteTx},
 	}
 	rt.postMap = postMethodMap
 	rt.getMap = getMethodMap

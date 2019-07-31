@@ -1711,6 +1711,116 @@ func CreateTx(param Params) map[string]interface{} {
 	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
 }
 
+func CreateVoteTx(param Params) map[string]interface{} {
+	inputs, ok := param["inputs"].([]interface{})
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find inputs")
+	}
+	var utxoList [][]*blockchain.UTXO
+	var total int64
+	for _, v := range inputs {
+		input, ok := v.(string)
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not valid input value")
+		}
+		programhash, err := common.Uint168FromAddress(input)
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid address")
+		}
+		assetIDBytes, _ := FromReversedString("a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0")
+		assetID, err := common.Uint256FromBytes(assetIDBytes)
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
+		}
+		utxos, err := blockchain2.DefaultChainStoreEx.GetUnspentFromProgramHash(*programhash, *assetID)
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Internal error")
+		}
+		for _, utxo := range utxos {
+			total += int64(utxo.Value)
+		}
+		utxoList = append(utxoList, utxos)
+	}
+
+	outputs, ok := param["outputs"].([]interface{})
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find outputs")
+	}
+	var smAmt int64
+	for _, v := range outputs {
+		output := v.(map[string]interface{})
+		_, ok := output["addr"].(string)
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find addr in output")
+		}
+		amt, ok := output["amt"].(float64)
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+		}
+		smAmt += int64(amt)
+	}
+	var left = total - smAmt - int64(config.Parameters.PowConfiguration.MinTxFee)
+	if left < 0 {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
+	}
+	smAmt = total - int64(config.Parameters.PowConfiguration.MinTxFee)
+	outputs = append(outputs, map[string]interface{}{"addr": (inputs[0]).(string), "amt": left})
+	paraListMap := make(map[string]interface{})
+	txList := make([]map[string]interface{}, 0)
+	txListMap := make(map[string]interface{})
+	txList = append(txList, txListMap)
+	var index = -1
+	var spendMoney int64 = 0
+	var hasEnoughFee = false
+	utxoInputsArray := make([]map[string]interface{}, 0)
+	for i, utxos := range utxoList {
+		addr := inputs[i].(string)
+		for j, utxo := range utxos {
+			index = j
+			spendMoney += int64(utxo.Value)
+			if spendMoney >= smAmt+int64(config.Parameters.PowConfiguration.MinTxFee) {
+				hasEnoughFee = true
+				break
+			}
+		}
+		for z := 0; z <= index; z++ {
+			utxoInputsDetail := make(map[string]interface{})
+			b, _ := FromReversedString(utxos[z].TxID.String())
+			utxoInputsDetail["txid"] = hex.EncodeToString(b)
+			utxoInputsDetail["index"] = utxos[z].Index
+			utxoInputsDetail["address"] = addr
+			utxoInputsArray = append(utxoInputsArray, utxoInputsDetail)
+		}
+		if hasEnoughFee {
+			break
+		}
+	}
+	if !hasEnoughFee {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
+	}
+	utxoOutputsArray := make([]map[string]interface{}, 0)
+	for _, v := range outputs {
+		output := v.(map[string]interface{})
+		utxoOutputsDetail := make(map[string]interface{})
+		utxoOutputsDetail["address"] = output["addr"]
+		utxoOutputsDetail["amount"] = output["amt"]
+		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+	}
+	leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee) - smAmt
+	if leftMoney > 0 {
+		utxoOutputsDetail := make(map[string]interface{})
+		utxoOutputsDetail["address"] = inputs[0]
+		utxoOutputsDetail["amount"] = leftMoney
+		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+	}
+
+	paraListMap["Transactions"] = txList
+	txListMap["UTXOInputs"] = utxoInputsArray
+	txListMap["Outputs"] = utxoOutputsArray
+	txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
+	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
+}
+
 func GetCmcPrice(param Params) map[string]interface{} {
 	limit, ok := param["limit"].(string)
 	l := 0
