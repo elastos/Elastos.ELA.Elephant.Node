@@ -50,10 +50,6 @@ var (
 )
 
 func main() {
-	var interrupt = signal.NewInterrupt()
-	defer func() {
-		<-interrupt.C
-	}()
 	if err := setupNode().Run(os.Args); err != nil {
 		cmdcom.PrintErrorMsg(err.Error())
 		os.Exit(1)
@@ -150,13 +146,13 @@ func startNode(c *cli.Context) {
 	if err != nil {
 		printErrorAndExit(err)
 	}
-	defer chainStore.Close()
 	var chainStoreEx blockchain2.IChainStoreExtend
 	chainStoreEx, err = blockchain2.NewChainStoreEx(chainStore, filepath.Join(dataDir, "ext"))
 	if err != nil {
 		printErrorAndExit(err)
 	}
 	defer chainStoreEx.CloseEx()
+	defer chainStore.Close()
 	ledger.Store = chainStore // fixme
 
 	dposStore, err = store.NewDposStore(dataDir)
