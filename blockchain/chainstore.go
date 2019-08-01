@@ -13,6 +13,7 @@ import (
 	"github.com/elastos/Elastos.ELA/core/types/payload"
 	"github.com/robfig/cron"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -74,11 +75,10 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 			memo = tx.Attributes[0].Data
 		}
 		if tx.TxType == CoinBase {
-			vouts := txs[i].Outputs
 			var to []common2.Uint168
 			hold := make(map[common2.Uint168]uint64)
 			txhscoinbase := make([]types.TransactionHistory, 0)
-			for _, vout := range vouts {
+			for _, vout := range tx.Outputs {
 				if !common.ContainsU168(vout.ProgramHash, to) {
 					to = append(to, vout.ProgramHash)
 					txh := types.TransactionHistory{}
@@ -123,7 +123,6 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 			for _, input := range tx.Inputs {
 				txid := input.Previous.TxID
 				index := input.Previous.Index
-				//txResp, err := get("http://" + config.Conf.Ela.Host + TransactionDetail + vintxid)
 				referTx, _, err := c.GetTransaction(txid)
 				if err != nil {
 					return err
@@ -257,7 +256,11 @@ func (c ChainStoreExtend) loop() {
 			now := time.Now()
 			switch kind := t.(type) {
 			case *Block:
-				c.persistTxHistory(kind)
+				err := c.persistTxHistory(kind)
+				if err != nil {
+					log.Error("Error persist transaction history %s", err.Error())
+					os.Exit(-1)
+				}
 				tcall := float64(time.Now().Sub(now)) / float64(time.Second)
 				log.Debugf("handle SaveHistory time cost: %g num transactions:%d", tcall, len(kind.Transactions))
 			}

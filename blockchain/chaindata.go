@@ -33,8 +33,8 @@ func (c ChainStoreExtend) rollback() {
 // value: serialized history
 func (c ChainStoreExtend) persistTransactionHistory(txhs []types.TransactionHistory) error {
 	c.begin()
-	for _, txh := range txhs {
-		err := c.doPersistTransactionHistory(txh)
+	for i, txh := range txhs {
+		err := c.doPersistTransactionHistory(uint64(i), txh)
 		if err != nil {
 			c.rollback()
 			log.Fatal("Error persist transaction history")
@@ -74,7 +74,7 @@ func (c ChainStoreExtend) doPersistPbks(k common.Uint168, pub []byte) error {
 	return nil
 }
 
-func (c ChainStoreExtend) doPersistTransactionHistory(history types.TransactionHistory) error {
+func (c ChainStoreExtend) doPersistTransactionHistory(i uint64, history types.TransactionHistory) error {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataTxHistoryPrefix))
 	err := common.WriteVarBytes(key, history.Address[:])
@@ -82,6 +82,10 @@ func (c ChainStoreExtend) doPersistTransactionHistory(history types.TransactionH
 		return err
 	}
 	err = common.WriteUint64(key, history.Height)
+	if err != nil {
+		return err
+	}
+	err = common.WriteUint64(key, i)
 	if err != nil {
 		return err
 	}
