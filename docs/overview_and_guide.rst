@@ -99,3 +99,89 @@ Run the node::
 
     $ ./elephant
 
+Nginx config Example::
+
+    server { # simple reverse-proxy
+        server_name  exmaple.com;
+        access_log   /var/log/nginx/node.access.log;
+
+        # pass requests for dynamic content to rails/turbogears/zope, et al
+
+        location ~ ^/api/1/balance {
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/1/cmc {
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/1/createTx {
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/1/createVoteTx {
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/1/history {
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/1/sendRawTx {
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        listen 443 ssl; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/exmaple.com/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/exmaple.com/privkey.pem; # managed by Certbot
+        include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+    }
+
+    server {
+        if ($host = exmaple.com) {
+            return 301 https://$host$request_uri;
+        } # managed by Certbot
+
+
+        server_name  exmaple.com;
+        listen 80;
+        return 404; # managed by Certbot
+    }
