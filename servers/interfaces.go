@@ -1706,7 +1706,16 @@ func CreateTx(param Params) map[string]interface{} {
 		output := v.(map[string]interface{})
 		utxoOutputsDetail := make(map[string]interface{})
 		utxoOutputsDetail["address"] = output["addr"]
-		utxoOutputsDetail["amount"] = output["amt"]
+		switch output["amt"].(type) {
+		case float64:
+			utxoOutputsDetail["amount"] = output["amt"].(float64)
+		case string:
+			var err error
+			utxoOutputsDetail["amount"], err = strconv.ParseFloat(output["amt"].(string), 64)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+			}
+		}
 		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 	}
 	leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee) - smAmt
