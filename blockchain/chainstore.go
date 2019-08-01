@@ -271,7 +271,7 @@ func (c ChainStoreExtend) loop() {
 func (c ChainStoreExtend) GetTxHistory(addr string) types.TransactionHistorySorter {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataTxHistoryPrefix))
-	txhs := make(types.TransactionHistorySorter,0)
+	txhs := make(types.TransactionHistorySorter, 0)
 	address, err := common2.Uint168FromAddress(addr)
 	if err != nil {
 		return txhs

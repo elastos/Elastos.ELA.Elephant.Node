@@ -42,6 +42,7 @@ const (
 	ApiGetBalance   = "/api/1/balance/:addr"
 	ApiSendRawTx    = "/api/1/sendRawTx"
 	ApiCreateVoteTx = "/api/1/createVoteTx"
+	ApiCurrHeight   = "/api/1/currHeight"
 )
 
 var ext_api_handle = map[string]bool{
@@ -52,6 +53,7 @@ var ext_api_handle = map[string]bool{
 	ApiGetBalance:   true,
 	ApiSendRawTx:    true,
 	ApiCreateVoteTx: true,
+	ApiCurrHeight:   true,
 }
 
 type Action struct {
@@ -136,6 +138,7 @@ func (rt *restServer) initializeMethod() {
 		ApiCmc:          {name: "cmc", handler: servers.GetCmcPrice},
 		ApiGetPublicKey: {name: "getpublickey", handler: servers.GetPublicKey},
 		ApiGetBalance:   {name: "getbalance", handler: servers.GetBalance},
+		ApiCurrHeight:   {name: "currHeight", handler: servers.CurrHeight},
 	}
 	postMethodMap := map[string]Action{
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
@@ -238,6 +241,7 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 	case ApiSendRawTx:
 	case ApiCmc:
 		getQueryParam(r, req)
+	case ApiCurrHeight:
 	}
 	return req
 }

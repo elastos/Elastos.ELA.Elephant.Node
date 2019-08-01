@@ -676,6 +676,10 @@ func GetBlockHeight(param Params) map[string]interface{} {
 	return ResponsePack(Success, Store.GetHeight())
 }
 
+func CurrHeight(param Params) map[string]interface{} {
+	return ResponsePackEx(ELEPHANT_SUCCESS, Store.GetHeight())
+}
+
 func GetBestBlockHash(param Params) map[string]interface{} {
 	hash, err := Store.GetBlockHash(Store.GetHeight())
 	if err != nil {
