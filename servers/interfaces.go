@@ -1655,9 +1655,16 @@ func CreateTx(param Params) map[string]interface{} {
 		if !ok {
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find addr in output")
 		}
-		amt, ok := output["amt"].(float64)
-		if !ok {
-			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+		var amt float64
+		var err error
+		switch output["amt"].(type) {
+		case float64:
+			amt = output["amt"].(float64)
+		case string:
+			amt, err = strconv.ParseFloat(output["amt"].(string), 64)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+			}
 		}
 		smAmt += int64(amt)
 	}
