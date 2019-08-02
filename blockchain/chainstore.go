@@ -288,6 +288,17 @@ func (c ChainStoreExtend) GetTxHistory(addr string) types.TransactionHistorySort
 		val.Write(iter.Value())
 		txh := types.TransactionHistory{}
 		txhd, _ := txh.Deserialize(val)
+		if txhd.Type == "income" {
+			if len(txhd.Inputs) > 0 {
+				txhd.Inputs = []string{txhd.Inputs[0]}
+			} else {
+				txhd.Inputs = []string{}
+			}
+			txhd.Outputs = []string{txhd.Address}
+		} else {
+			txhd.Inputs = []string{txhd.Address}
+			txhd.Outputs = []string{txhd.Outputs[0]}
+		}
 		txhs = append(txhs, *txhd)
 	}
 	sort.Sort(txhs)
