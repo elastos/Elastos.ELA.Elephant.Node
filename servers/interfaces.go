@@ -1567,19 +1567,25 @@ func ResponsePackEx(errCode ErrCode, result interface{}) map[string]interface{} 
 func GetHistory(param Params) map[string]interface{} {
 	addr, ok := param.String("addr")
 	if !ok {
-		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "address can not be blank")
 	}
 	_, err := common.Uint168FromAddress(addr)
 	if err != nil {
-		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid address")
+	}
+	order, exist := param.String("order")
+	if exist {
+		if order != "asc" && order != "desc" {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid order")
+		}
 	}
 	ok = param.HasKey("pageNum")
 	ok1 := param.HasKey("pageSize")
 	if !ok && !ok1 {
-		txhs := blockchain2.DefaultChainStoreEx.GetTxHistory(addr)
+		txhs := blockchain2.DefaultChainStoreEx.GetTxHistory(addr, order)
 		thr := types.ThResult{
 			History:  txhs,
-			TotalNum: txhs.Len(),
+			TotalNum: len(txhs.([]types.TransactionHistoryDisplay)),
 		}
 		return ResponsePackEx(ELEPHANT_SUCCESS, thr)
 	} else if ok && ok1 {
@@ -1591,7 +1597,7 @@ func GetHistory(param Params) map[string]interface{} {
 		if !cool {
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "")
 		}
-		txhs, total := blockchain2.DefaultChainStoreEx.GetTxHistoryByPage(addr, pageNum, pageSize)
+		txhs, total := blockchain2.DefaultChainStoreEx.GetTxHistoryByPage(addr, order, pageNum, pageSize)
 		thr := types.ThResult{
 			History:  txhs,
 			TotalNum: total,

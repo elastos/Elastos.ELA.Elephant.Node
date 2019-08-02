@@ -271,10 +271,15 @@ func (c ChainStoreExtend) loop() {
 	}
 }
 
-func (c ChainStoreExtend) GetTxHistory(addr string) types.TransactionHistorySorter {
+func (c ChainStoreExtend) GetTxHistory(addr string, order string) interface{} {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataTxHistoryPrefix))
-	txhs := make(types.TransactionHistorySorter, 0)
+	var txhs interface{}
+	if order == "desc" {
+		txhs = make(types.TransactionHistorySorterDesc, 0)
+	} else {
+		txhs = make(types.TransactionHistorySorter, 0)
+	}
 	address, err := common2.Uint168FromAddress(addr)
 	if err != nil {
 		return txhs
@@ -299,16 +304,28 @@ func (c ChainStoreExtend) GetTxHistory(addr string) types.TransactionHistorySort
 			txhd.Inputs = []string{txhd.Address}
 			txhd.Outputs = []string{txhd.Outputs[0]}
 		}
-		txhs = append(txhs, *txhd)
+		if order == "desc" {
+			txhs = append(txhs.(types.TransactionHistorySorterDesc), *txhd)
+		} else {
+			txhs = append(txhs.(types.TransactionHistorySorter), *txhd)
+		}
 	}
-	sort.Sort(txhs)
+	if order == "desc" {
+		sort.Sort(txhs.(types.TransactionHistorySorterDesc))
+	} else {
+		sort.Sort(txhs.(types.TransactionHistorySorter))
+	}
 	return txhs
 }
 
-func (c ChainStoreExtend) GetTxHistoryByPage(addr string, pageNum, pageSize uint32) (types.TransactionHistorySorter, int) {
-	txhs := c.GetTxHistory(addr)
+func (c ChainStoreExtend) GetTxHistoryByPage(addr, order string, pageNum, pageSize uint32) (interface{}, int) {
+	txhs := c.GetTxHistory(addr, order)
 	from := (pageNum - 1) * pageSize
-	return txhs.Filter(from, pageSize), txhs.Len()
+	if order == "desc" {
+		return txhs.(types.TransactionHistorySorterDesc).Filter(from, pageSize), len(txhs.(types.TransactionHistorySorterDesc))
+	} else {
+		return txhs.(types.TransactionHistorySorter).Filter(from, pageSize), len(txhs.(types.TransactionHistorySorter))
+	}
 }
 
 func (c ChainStoreExtend) GetCmcPrice() types.Cmcs {
