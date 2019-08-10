@@ -1671,6 +1671,8 @@ func CreateTx(param Params) map[string]interface{} {
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 			}
+		default:
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 		}
 		smAmt += int64(amt)
 	}
@@ -1721,6 +1723,8 @@ func CreateTx(param Params) map[string]interface{} {
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 			}
+		default:
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 		}
 		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 	}
@@ -1779,8 +1783,17 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		if !ok {
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find addr in output")
 		}
-		amt, ok := output["amt"].(float64)
-		if !ok {
+		var amt float64
+		var err error
+		switch output["amt"].(type) {
+		case float64:
+			amt = output["amt"].(float64)
+		case string:
+			amt, err = strconv.ParseFloat(output["amt"].(string), 64)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+			}
+		default:
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 		}
 		smAmt += int64(amt)
@@ -1829,7 +1842,20 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		output := v.(map[string]interface{})
 		utxoOutputsDetail := make(map[string]interface{})
 		utxoOutputsDetail["address"] = output["addr"]
-		utxoOutputsDetail["amount"] = output["amt"]
+		switch output["amt"].(type) {
+		case float64:
+			utxoOutputsDetail["amount"] = output["amt"].(float64)
+		case string:
+			var err error
+			utxoOutputsDetail["amount"], err = strconv.ParseFloat(output["amt"].(string), 64)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+			}
+		case int64:
+			utxoOutputsDetail["amount"] = output["amt"].(int64)
+		default:
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+		}
 		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 	}
 	leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee) - smAmt
