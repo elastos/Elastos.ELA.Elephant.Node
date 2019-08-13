@@ -2034,18 +2034,12 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t`, chain.Vote_info{})
 					continue
 				}
 				vi.Address = addr
-				// FIXME store address reward of specific height in level
-				val, err := blockchain2.DBA.ToString("select value from chain_block_transaction_history where height = " + strconv.Itoa(int(v.Height)) + " and txType = 'CoinBase' and value < " + strconv.Itoa(tools.Miner_Reward_PerBlock) + " and address = '" + addr + "'")
+				val, err := blockchain2.DefaultChainStoreEx.GetDposRewardByHeight(addr, uint32(v.Height))
 				if err != nil {
 					log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
 					continue
 				}
-				if val != "" {
-					vi.Reward = val
-				} else {
-					vi.Reward = "0"
-				}
-
+				vi.Reward = val.String()
 				var vote float64
 				if vi.Value == "" {
 					vote = 0
@@ -2123,19 +2117,12 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
 			continue
 		}
 		vi.Address = addr
-		//FIXME get it from leveldb
-		val, err := blockchain2.DBA.ToString("select sum(value) from chain_block_transaction_history where txType = 'CoinBase' and address = '" + addr + "'")
+		val, err := blockchain2.DefaultChainStoreEx.GetDposReward(addr)
 		if err != nil {
 			log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
 			continue
 		}
-		if val != "" {
-			iv, _ := strconv.Atoi(val)
-			vi.Reward = strconv.FormatFloat(float64(iv)/100000000.0, 'f', 8, 64)
-		} else {
-			vi.Reward = "0"
-		}
-
+		vi.Reward = val.String()
 		var vote float64
 		if vi.Value == "" {
 			vote = 0
@@ -2187,7 +2174,6 @@ func GetProducerByTxs(param Params) map[string]interface{} {
 	for _, v := range txids {
 		txid := v.(string)
 		tmp := chain.Producer_info{}
-		//TODO the transaction may contains producer that has been canceled
 		producer, err := blockchain2.DBA.ToStruct("select b.* from chain_vote_info a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey where a.txid = '"+txid+"'", tmp)
 		if err != nil {
 			return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())

@@ -54,11 +54,40 @@ func (c ChainStoreExtend) persistPbks(pbks map[common.Uint168][]byte) error {
 		err := c.doPersistPbks(k, v)
 		if err != nil {
 			c.rollback()
-			log.Fatal("Error persist transaction history")
+			log.Fatal("Error persist public keys")
 			os.Exit(-1)
 		}
 	}
 	c.commit()
+	return nil
+}
+
+func (c ChainStoreExtend) persistDposReward(rewardDpos map[common.Uint168]common.Fixed64, height uint32) error {
+	c.begin()
+	for k, v := range rewardDpos {
+		err := c.doPersistDposReward(k, v, height)
+		if err != nil {
+			c.rollback()
+			log.Fatal("Error persist dpos reward")
+			os.Exit(-1)
+		}
+	}
+	c.commit()
+	return nil
+}
+
+func (c ChainStoreExtend) doPersistDposReward(k common.Uint168, v common.Fixed64, h uint32) error {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataDposRewardPrefix))
+	err := k.Serialize(key)
+	if err != nil {
+		return err
+	}
+	common.WriteUint32(key, h)
+
+	value := new(bytes.Buffer)
+	v.Serialize(value)
+	c.BatchPut(key.Bytes(), value.Bytes())
 	return nil
 }
 

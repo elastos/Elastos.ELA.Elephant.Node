@@ -148,10 +148,6 @@ func processVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) erro
 }
 
 func (c ChainStoreExtend) persistTxHistory(block *Block) error {
-	txs := block.Transactions
-	txhs := make([]types.TransactionHistory, 0)
-	pubks := make(map[common2.Uint168][]byte)
-
 	//process vote
 	db, err := DBA.Begin()
 	if err != nil {
@@ -169,6 +165,11 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 		}
 	}
 
+	txs := block.Transactions
+	txhs := make([]types.TransactionHistory, 0)
+	pubks := make(map[common2.Uint168][]byte)
+	dposReward := make(map[common2.Uint168]common2.Fixed64)
+
 	for i := 0; i < len(txs); i++ {
 		tx := txs[i]
 		txid, err := common.ReverseHexString(tx.Hash().String())
@@ -179,12 +180,11 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 		if len(tx.Attributes) > 0 {
 			memo = tx.Attributes[0].Data
 		}
-
 		if tx.TxType == CoinBase {
 			var to []common2.Uint168
 			hold := make(map[common2.Uint168]uint64)
 			txhscoinbase := make([]types.TransactionHistory, 0)
-			for _, vout := range tx.Outputs {
+			for i, vout := range tx.Outputs {
 				if !common.ContainsU168(vout.ProgramHash, to) {
 					to = append(to, vout.ProgramHash)
 					txh := types.TransactionHistory{}
@@ -201,6 +201,10 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 					txhscoinbase = append(txhscoinbase, txh)
 				} else {
 					hold[vout.ProgramHash] += uint64(vout.Value)
+				}
+				// dpos reward
+				if i > 1 {
+					dposReward[vout.ProgramHash] = vout.Value
 				}
 			}
 			for i := 0; i < len(txhscoinbase); i++ {
@@ -347,6 +351,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 	}
 	c.persistTransactionHistory(txhs)
 	c.persistPbks(pubks)
+	c.persistDposReward(dposReward, block.Height)
 	return nil
 }
 
@@ -464,4 +469,34 @@ func (c ChainStoreExtend) GetPublicKey(addr string) string {
 		return ""
 	}
 	return hex.EncodeToString(buf[1:])
+}
+
+func (c ChainStoreExtend) GetDposReward(addr string) (*common2.Fixed64, error) {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataDposRewardPrefix))
+	k, _ := common2.Uint168FromAddress(addr)
+	k.Serialize(key)
+	iter := c.NewIterator(key.Bytes())
+	var r common2.Fixed64
+	for iter.Next() {
+		v, err := common2.Fixed64FromBytes(iter.Value())
+		if err != nil {
+			return nil, err
+		}
+		r += *v
+	}
+	return &r, nil
+}
+
+func (c ChainStoreExtend) GetDposRewardByHeight(addr string, height uint32) (*common2.Fixed64, error) {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataDposRewardPrefix))
+	k, _ := common2.Uint168FromAddress(addr)
+	k.Serialize(key)
+	common2.WriteUint32(key, height)
+	buf, err := c.Get(key.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	return common2.Fixed64FromBytes(buf)
 }
