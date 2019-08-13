@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
+	common2 "github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
-	"github.com/elastos/Elastos.ORG.API.Misc/chain"
-	"github.com/elastos/Elastos.ORG.API.Misc/tools"
+
 	"sort"
 	"strconv"
 	"strings"
@@ -1968,19 +1968,19 @@ func VoterStatistic(param Params) map[string]interface{} {
 		from = (num - 1) * size
 	}
 	sql = "select * from chain_vote_info where address = '" + addr + "' order by id desc "
-	info, err := blockchain2.DBA.ToStruct(sql, chain.Vote_info{})
+	info, err := blockchain2.DBA.ToStruct(sql, types.Vote_info{})
 	if err != nil {
 		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 	}
-	headersContainer := make(map[string]*chain.Vote_statistic_header)
+	headersContainer := make(map[string]*types.Vote_statistic_header)
 	for i := 0; i < len(info); i++ {
-		data := info[i].(*chain.Vote_info)
+		data := info[i].(*types.Vote_info)
 		h, ok := headersContainer[data.Txid+strconv.Itoa(data.N)]
 		if ok {
 			h.Node_num += 1
 			h.Nodes = append(h.Nodes, data.Producer_public_key)
 		} else {
-			h = new(chain.Vote_statistic_header)
+			h = new(types.Vote_statistic_header)
 			h.Value = data.Value
 			h.Node_num = 1
 			h.Txid = data.Txid
@@ -1991,11 +1991,11 @@ func VoterStatistic(param Params) map[string]interface{} {
 			headersContainer[data.Txid+strconv.Itoa(data.N)] = h
 		}
 	}
-	var voteStatisticSorter chain.Vote_statisticSorter
+	var voteStatisticSorter types.Vote_statisticSorter
 	for _, v := range headersContainer {
-		voteStatisticSorter = append(voteStatisticSorter, chain.Vote_statistic{
+		voteStatisticSorter = append(voteStatisticSorter, types.Vote_statistic{
 			*v,
-			[]chain.Vote_info{},
+			[]types.Vote_info{},
 		})
 	}
 	sort.Sort(voteStatisticSorter)
@@ -2004,9 +2004,9 @@ func VoterStatistic(param Params) map[string]interface{} {
 	} else if !(from == 0 && size == 0) && int(from+1) <= len(voteStatisticSorter) && int(from+1+size) > len(voteStatisticSorter) {
 		voteStatisticSorter = voteStatisticSorter[from:]
 	} else {
-		voteStatisticSorter = chain.Vote_statisticSorter{}
+		voteStatisticSorter = types.Vote_statisticSorter{}
 	}
-	var voteStatistic chain.Vote_statisticSorter
+	var voteStatistic types.Vote_statisticSorter
 	ranklisthoder := make(map[int64][]interface{})
 	//height+producer_public_key : index
 	ranklisthoderByProducer := make(map[string]int)
@@ -2017,7 +2017,7 @@ func VoterStatistic(param Params) map[string]interface{} {
 			rst, err = blockchain2.DBA.ToStruct(`select m.*,(@row_number:=@row_number + 1) as "rank" from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from 
 (select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+strconv.Itoa(int(v.Height))+` or
 cancel_height is null) and height <= `+strconv.Itoa(int(v.Height))+` group by producer_public_key) a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey 
-order by value desc) m ,  (SELECT @row_number:=0) AS t`, chain.Vote_info{})
+order by value desc) m ,  (SELECT @row_number:=0) AS t`, types.Vote_info{})
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 			}
@@ -2027,8 +2027,9 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t`, chain.Vote_info{})
 				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 			}
 			for _, r := range rst {
-				vi := r.(*chain.Vote_info)
-				addr, err := tools.GetAddress(vi.Ownerpublickey)
+				vi := r.(*types.Vote_info)
+				public, _ := hex.DecodeString(vi.Ownerpublickey)
+				addr, err := common2.GetAddress(public)
 				if err != nil {
 					log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
 					continue
@@ -2058,14 +2059,14 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t`, chain.Vote_info{})
 				}
 			}
 			for m := 0; m < len(rst); m++ {
-				ranklisthoderByProducer[strconv.Itoa(int(v.Height))+rst[m].(*chain.Vote_info).Producer_public_key] = m
+				ranklisthoderByProducer[strconv.Itoa(int(v.Height))+rst[m].(*types.Vote_info).Producer_public_key] = m
 			}
 		}
-		var voteInfos []chain.Vote_info
+		var voteInfos []types.Vote_info
 		for _, pub := range v.Nodes {
-			voteInfos = append(voteInfos, *rst[ranklisthoderByProducer[strconv.Itoa(int(v.Height))+pub]].(*chain.Vote_info))
+			voteInfos = append(voteInfos, *rst[ranklisthoderByProducer[strconv.Itoa(int(v.Height))+pub]].(*types.Vote_info))
 		}
-		voteStatistic = append(voteStatistic, chain.Vote_statistic{
+		voteStatistic = append(voteStatistic, types.Vote_statistic{
 			v,
 			voteInfos,
 		})
@@ -2110,8 +2111,9 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
 		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 	}
 	for _, r := range rst {
-		vi := r.(*chain.Vote_info)
-		addr, err := tools.GetAddress(vi.Ownerpublickey)
+		vi := r.(*types.Vote_info)
+		public, _ := hex.DecodeString(vi.Ownerpublickey)
+		addr, err := common2.GetAddress(public)
 		if err != nil {
 			log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
 			continue
@@ -2173,7 +2175,7 @@ func GetProducerByTxs(param Params) map[string]interface{} {
 	var rst []ret
 	for _, v := range txids {
 		txid := v.(string)
-		tmp := chain.Producer_info{}
+		tmp := types.Producer_info{}
 		producer, err := blockchain2.DBA.ToStruct("select b.* from chain_vote_info a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey where a.txid = '"+txid+"'", tmp)
 		if err != nil {
 			return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
