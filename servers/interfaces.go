@@ -680,6 +680,10 @@ func CurrHeight(param Params) map[string]interface{} {
 	return ResponsePackEx(ELEPHANT_SUCCESS, Store.GetHeight())
 }
 
+func GetNodeFee(param Params) map[string]interface{} {
+	return ResponsePackEx(ELEPHANT_SUCCESS, config.Parameters.PowConfiguration.MinTxFee)
+}
+
 func GetBestBlockHash(param Params) map[string]interface{} {
 	hash, err := Store.GetBlockHash(Store.GetHeight())
 	if err != nil {

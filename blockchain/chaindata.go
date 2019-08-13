@@ -26,7 +26,7 @@ func (c ChainStoreExtend) commit() {
 }
 
 func (c ChainStoreExtend) rollback() {
-	c.rollback()
+
 }
 
 // key: DataEntryPrefix + height + address
