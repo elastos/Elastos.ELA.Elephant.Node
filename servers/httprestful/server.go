@@ -35,27 +35,37 @@ const (
 	ApiGetTransactionPool  = "/api/v1/transactionpool"
 
 	//extended
-	ApiGetHistory   = "/api/1/history/:addr"
-	ApiCreateTx     = "/api/1/createTx"
-	ApiCmc          = "/api/1/cmc"
-	ApiGetPublicKey = "/api/1/pubkey/:addr"
-	ApiGetBalance   = "/api/1/balance/:addr"
-	ApiSendRawTx    = "/api/1/sendRawTx"
-	ApiCreateVoteTx = "/api/1/createVoteTx"
-	ApiCurrHeight   = "/api/1/currHeight"
-	ApiGetNodeFee   = "/api/1/fee"
+	ApiGetHistory           = "/api/1/history/:addr"
+	ApiCreateTx             = "/api/1/createTx"
+	ApiCmc                  = "/api/1/cmc"
+	ApiGetPublicKey         = "/api/1/pubkey/:addr"
+	ApiGetBalance           = "/api/1/balance/:addr"
+	ApiSendRawTx            = "/api/1/sendRawTx"
+	ApiCreateVoteTx         = "/api/1/createVoteTx"
+	ApiCurrHeight           = "/api/1/currHeight"
+	ApiGetNodeFee           = "/api/1/fee"
+	ApiProducerStatistic    = "/api/1/dpos/producer/:producer/:height"
+	ApiVoterStatistic       = "/api/1/dpos/address/:addr"
+	ApiProducerRankByHeight = "/api/1/dpos/rank/height/:height"
+	ApiTotalVoteByHeight    = "/api/1/dpos/vote/height/:height"
+	ApiGetProducerByTxs     = "/api/1/dpos/transaction/producer"
 )
 
 var ext_api_handle = map[string]bool{
-	ApiGetHistory:   true,
-	ApiCreateTx:     true,
-	ApiCmc:          true,
-	ApiGetPublicKey: true,
-	ApiGetBalance:   true,
-	ApiSendRawTx:    true,
-	ApiCreateVoteTx: true,
-	ApiCurrHeight:   true,
-	ApiGetNodeFee:   true,
+	ApiGetHistory:           true,
+	ApiCreateTx:             true,
+	ApiCmc:                  true,
+	ApiGetPublicKey:         true,
+	ApiGetBalance:           true,
+	ApiSendRawTx:            true,
+	ApiCreateVoteTx:         true,
+	ApiCurrHeight:           true,
+	ApiGetNodeFee:           true,
+	ApiProducerStatistic:    true,
+	ApiVoterStatistic:       true,
+	ApiProducerRankByHeight: true,
+	ApiTotalVoteByHeight:    true,
+	ApiGetProducerByTxs:     true,
 }
 
 type Action struct {
@@ -136,20 +146,25 @@ func (rt *restServer) initializeMethod() {
 		ApiGetBalanceByAsset:   {name: "getbalancebyasset", handler: servers.GetBalanceByAsset},
 
 		// extended
-		ApiGetHistory:   {name: "gethistory", handler: servers.GetHistory},
-		ApiCmc:          {name: "cmc", handler: servers.GetCmcPrice},
-		ApiGetPublicKey: {name: "getpublickey", handler: servers.GetPublicKey},
-		ApiGetBalance:   {name: "getbalance", handler: servers.GetBalance},
-		ApiCurrHeight:   {name: "currHeight", handler: servers.CurrHeight},
-		ApiGetNodeFee:   {name: "nodeFee", handler: servers.GetNodeFee},
+		ApiGetHistory:           {name: "gethistory", handler: servers.GetHistory},
+		ApiCmc:                  {name: "cmc", handler: servers.GetCmcPrice},
+		ApiGetPublicKey:         {name: "getpublickey", handler: servers.GetPublicKey},
+		ApiGetBalance:           {name: "getbalance", handler: servers.GetBalance},
+		ApiCurrHeight:           {name: "currHeight", handler: servers.CurrHeight},
+		ApiGetNodeFee:           {name: "nodeFee", handler: servers.GetNodeFee},
+		ApiProducerStatistic:    {name: "producerStatistic", handler: servers.ProducerStatistic},
+		ApiVoterStatistic:       {name: "voterStatistic", handler: servers.VoterStatistic},
+		ApiProducerRankByHeight: {name: "producerRankByHeight", handler: servers.ProducerRankByHeight},
+		ApiTotalVoteByHeight:    {name: "totalVoteByHeight", handler: servers.TotalVoteByHeight},
 	}
 	postMethodMap := map[string]Action{
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
 
 		// extended
-		ApiCreateTx:     {name: "createTx", handler: servers.CreateTx},
-		ApiSendRawTx:    {name: "sendRawTx", handler: servers.SendRawTx},
-		ApiCreateVoteTx: {name: "createVoteTx", handler: servers.CreateVoteTx},
+		ApiCreateTx:         {name: "createTx", handler: servers.CreateTx},
+		ApiSendRawTx:        {name: "sendRawTx", handler: servers.SendRawTx},
+		ApiCreateVoteTx:     {name: "createVoteTx", handler: servers.CreateVoteTx},
+		ApiGetProducerByTxs: {name: "getProducerByTxs", handler: servers.GetProducerByTxs},
 	}
 	rt.postMap = postMethodMap
 	rt.getMap = getMethodMap
@@ -183,6 +198,14 @@ func (rt *restServer) getPath(url string) string {
 		return ApiGetPublicKey
 	} else if strings.Contains(url, strings.TrimRight(ApiGetBalance, ":addr")) {
 		return ApiGetBalance
+	} else if strings.Contains(url, strings.TrimRight(ApiProducerStatistic, ":producer/:height")) {
+		return ApiProducerStatistic
+	} else if strings.Contains(url, strings.TrimRight(ApiVoterStatistic, ":addr")) {
+		return ApiVoterStatistic
+	} else if strings.Contains(url, strings.TrimRight(ApiProducerRankByHeight, ":height")) {
+		return ApiProducerRankByHeight
+	} else if strings.Contains(url, strings.TrimRight(ApiTotalVoteByHeight, ":height")) {
+		return ApiTotalVoteByHeight
 	}
 	return url
 }
@@ -246,6 +269,20 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 		getQueryParam(r, req)
 	case ApiCurrHeight:
 	case ApiGetNodeFee:
+	case ApiProducerStatistic:
+		req["producer"] = getParam(r, "producer")
+		req["height"] = getParam(r, "height")
+		getQueryParam(r, req)
+	case ApiVoterStatistic:
+		req["addr"] = getParam(r, "addr")
+		getQueryParam(r, req)
+	case ApiProducerRankByHeight:
+		req["height"] = getParam(r, "height")
+		getQueryParam(r, req)
+	case ApiTotalVoteByHeight:
+		req["height"] = getParam(r, "height")
+		getQueryParam(r, req)
+	case ApiGetProducerByTxs:
 	}
 	return req
 }

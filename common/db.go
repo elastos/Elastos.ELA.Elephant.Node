@@ -20,48 +20,6 @@ func NewInstance(filePath string) (*Dba, error) {
 	return &Dba{db}, nil
 }
 
-////Execute data manipulate language
-//func (dia *Dialect) Execute(sql string, args ...string) (int64, error) {
-//	log.Info(sql)
-//	stmt, err := dia.db.Prepare(sql)
-//	if err != nil {
-//		return 0, err
-//	}
-//	result, err := stmt.Exec(args)
-//	if err != nil {
-//		return 0, err
-//	}
-//	id, err := result.LastInsertId()
-//	if id == 0 {
-//		id, _ = result.RowsAffected()
-//		if err != nil {
-//			return 0, err
-//		}
-//	}
-//	return id, nil
-//}
-//
-////BatchExecute batch data manipulate
-//func (dia *Dialect) BatchExecute(sql string, tx *sql.Tx) (int64, error) {
-//	log.Info(sql)
-//	stmt, err := tx.Prepare(sql)
-//	if err != nil {
-//		return 0, err
-//	}
-//	result, err := stmt.Exec()
-//	if err != nil {
-//		return 0, err
-//	}
-//	id, err := result.LastInsertId()
-//	if id == 0 {
-//		id, _ = result.RowsAffected()
-//		if err != nil {
-//			return 0, err
-//		}
-//	}
-//	return id, nil
-//}
-//
 func (d *Dba) Qu(s string) (*list.List, error) {
 	rows, err := d.Query(s)
 	if err != nil {
@@ -128,21 +86,20 @@ func (d *Dba) ToStruct(sql string, strct interface{}) ([]interface{}, error) {
 	return r, nil
 }
 
-//
-//func (dia *Dialect) ToInt(sql string) (int, error) {
-//
-//	l, err := dia.Query(sql)
-//	if err != nil || l.Len() == 0 {
-//		return -1, err
-//	}
-//	m := l.Front().Value.(map[string]interface{})
-//	for _, v := range m {
-//		return strconv.Atoi(v.(string))
-//	}
-//
-//	return -1, err
-//}
-//
+func (d *Dba) ToInt(sql string) (int, error) {
+
+	l, err := d.Qu(sql)
+	if err != nil || l.Len() == 0 {
+		return -1, err
+	}
+	m := l.Front().Value.(map[string]interface{})
+	for _, v := range m {
+		return strconv.Atoi(v.(string))
+	}
+
+	return -1, err
+}
+
 func (d *Dba) ToFloat(sql string) (float64, error) {
 
 	l, err := d.Qu(sql)
@@ -171,9 +128,3 @@ func (d *Dba) ToString(sql string) (string, error) {
 
 	return "", err
 }
-
-//
-//func (dia *Dialect) Close() error {
-//	return dia.db.Close()
-//}
-//

@@ -1904,7 +1904,7 @@ func GetCmcPrice(param Params) map[string]interface{} {
 	return ResponsePackEx(ELEPHANT_SUCCESS, cmcs.C)
 }
 
-func producerStatistic(param Params) map[string]interface{} {
+func ProducerStatistic(param Params) map[string]interface{} {
 	pub, ok := param["producer"].(string)
 	if !ok || pub == "" || len(pub) != 66 {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, " invalid public key ")
@@ -1938,8 +1938,8 @@ func producerStatistic(param Params) map[string]interface{} {
 	return ResponsePackEx(ELEPHANT_SUCCESS, rst)
 }
 
-func voterStatistic(param Params) map[string]interface{} {
-	addr, ok := param["address"].(string)
+func VoterStatistic(param Params) map[string]interface{} {
+	addr, ok := param["addr"].(string)
 	if !ok || addr == "" || len(addr) != 34 {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, " invalid address ")
 	}
@@ -2080,7 +2080,7 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t`, chain.Vote_info{})
 }
 
 //
-func producerRankByHeight(param Params) map[string]interface{} {
+func ProducerRankByHeight(param Params) map[string]interface{} {
 	height, ok := param["height"].(string)
 	if !ok {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid height")
@@ -2157,7 +2157,7 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
 	return ResponsePackEx(ELEPHANT_SUCCESS, rst)
 }
 
-func totalVoteByHeight(param Params) map[string]interface{} {
+func TotalVoteByHeight(param Params) map[string]interface{} {
 	height, ok := param["height"].(string)
 	if !ok {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid height")
@@ -2174,7 +2174,7 @@ func totalVoteByHeight(param Params) map[string]interface{} {
 	return ResponsePackEx(ELEPHANT_SUCCESS, fmt.Sprintf("%.8f", rst))
 }
 
-func getProducerByTxs(param Params) map[string]interface{} {
+func GetProducerByTxs(param Params) map[string]interface{} {
 	txids, ok := param["txid"].([]interface{})
 	if !ok {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find txid")
