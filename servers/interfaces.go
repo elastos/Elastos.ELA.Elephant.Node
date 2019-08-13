@@ -7,6 +7,8 @@ import (
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
+	"github.com/elastos/Elastos.ORG.API.Misc/chain"
+	"github.com/elastos/Elastos.ORG.API.Misc/tools"
 	"sort"
 	"strconv"
 	"strings"
@@ -1900,4 +1902,302 @@ func GetCmcPrice(param Params) map[string]interface{} {
 		C: cmcs.C[:int64(l)],
 	}
 	return ResponsePackEx(ELEPHANT_SUCCESS, cmcs.C)
+}
+
+func producerStatistic(param Params) map[string]interface{} {
+	pub, ok := param["producer"].(string)
+	if !ok || pub == "" || len(pub) != 66 {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, " invalid public key ")
+	}
+	height, ok := param["height"].(string)
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, " invalid height ")
+	}
+	iHeight, err := strconv.Atoi(height)
+	if err != nil {
+		iHeight = 99999999
+	}
+	type ret struct {
+		Producer_public_key string `json:",omitempty"`
+		Vote_type           string `json:",omitempty"`
+		Txid                string `json:",omitempty"`
+		Value               string `json:",omitempty"`
+		Outputlock          int    `json:",omitempty"`
+		Address             string `json:",omitempty"`
+		Block_time          int64  `json:",omitempty"`
+		Height              int64  `json:",omitempty"`
+	}
+
+	rst, err := blockchain2.DBA.ToStruct("select Producer_public_key,Vote_type,Txid,Value,Address,Block_time,Height from chain_vote_info where producer_public_key = '"+pub+"' and (outputlock = 0 or outputlock >= height) and is_valid = 'YES' and height <= "+strconv.Itoa(iHeight), ret{})
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+	}
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+	}
+	return ResponsePackEx(ELEPHANT_SUCCESS, rst)
+}
+
+func voterStatistic(param Params) map[string]interface{} {
+	addr, ok := param["address"].(string)
+	if !ok || addr == "" || len(addr) != 34 {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, " invalid address ")
+	}
+	pageNum, _ := param["pageNum"].(string)
+	var sql string
+	var from int64
+	var size int64
+	if pageNum != "" {
+		pageSize, _ := param["pageSize"].(string)
+		if pageSize != "" {
+			var err error
+			size, err = strconv.ParseInt(pageSize, 10, 64)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, err.Error())
+			}
+		} else {
+			size = 10
+		}
+		num, err := strconv.ParseInt(pageNum, 10, 64)
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, err.Error())
+		}
+		if num <= 0 {
+			num = 1
+		}
+		from = (num - 1) * size
+	}
+	sql = "select * from chain_vote_info where address = '" + addr + "' order by id desc "
+	info, err := blockchain2.DBA.ToStruct(sql, chain.Vote_info{})
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+	}
+	headersContainer := make(map[string]*chain.Vote_statistic_header)
+	for i := 0; i < len(info); i++ {
+		data := info[i].(*chain.Vote_info)
+		h, ok := headersContainer[data.Txid+strconv.Itoa(data.N)]
+		if ok {
+			h.Node_num += 1
+			h.Nodes = append(h.Nodes, data.Producer_public_key)
+		} else {
+			h = new(chain.Vote_statistic_header)
+			h.Value = data.Value
+			h.Node_num = 1
+			h.Txid = data.Txid
+			h.Height = data.Height
+			h.Nodes = []string{data.Producer_public_key}
+			h.Block_time = data.Block_time
+			h.Is_valid = data.Is_valid
+			headersContainer[data.Txid+strconv.Itoa(data.N)] = h
+		}
+	}
+	var voteStatisticSorter chain.Vote_statisticSorter
+	for _, v := range headersContainer {
+		voteStatisticSorter = append(voteStatisticSorter, chain.Vote_statistic{
+			*v,
+			[]chain.Vote_info{},
+		})
+	}
+	sort.Sort(voteStatisticSorter)
+	if !(from == 0 && size == 0) && int(from+1+size) <= len(voteStatisticSorter) {
+		voteStatisticSorter = voteStatisticSorter[from : from+size]
+	} else if !(from == 0 && size == 0) && int(from+1) <= len(voteStatisticSorter) && int(from+1+size) > len(voteStatisticSorter) {
+		voteStatisticSorter = voteStatisticSorter[from:]
+	} else {
+		voteStatisticSorter = chain.Vote_statisticSorter{}
+	}
+	var voteStatistic chain.Vote_statisticSorter
+	ranklisthoder := make(map[int64][]interface{})
+	//height+producer_public_key : index
+	ranklisthoderByProducer := make(map[string]int)
+	for _, _v := range voteStatisticSorter {
+		v := _v.Vote_Header
+		rst, ok := ranklisthoder[v.Height]
+		if !ok {
+			rst, err = blockchain2.DBA.ToStruct(`select m.*,(@row_number:=@row_number + 1) as "rank" from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from 
+(select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+strconv.Itoa(int(v.Height))+` or
+cancel_height is null) and height <= `+strconv.Itoa(int(v.Height))+` group by producer_public_key) a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey 
+order by value desc) m ,  (SELECT @row_number:=0) AS t`, chain.Vote_info{})
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+			}
+			totalVote, err := blockchain2.DBA.ToFloat(`	select sum(a.value)  from (select A.producer_public_key , sum(value) as value from chain_vote_info A where (A.cancel_height > ` + strconv.Itoa(int(v.Height)) + ` or
+	 cancel_height is null) and height <= ` + strconv.Itoa(int(v.Height)) + ` group by producer_public_key order by value desc limit 96) a`)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+			}
+			for _, r := range rst {
+				vi := r.(*chain.Vote_info)
+				addr, err := tools.GetAddress(vi.Ownerpublickey)
+				if err != nil {
+					log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
+					continue
+				}
+				vi.Address = addr
+				// FIXME store address reward of specific height in level
+				val, err := blockchain2.DBA.ToString("select value from chain_block_transaction_history where height = " + strconv.Itoa(int(v.Height)) + " and txType = 'CoinBase' and value < " + strconv.Itoa(tools.Miner_Reward_PerBlock) + " and address = '" + addr + "'")
+				if err != nil {
+					log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
+					continue
+				}
+				if val != "" {
+					vi.Reward = val
+				} else {
+					vi.Reward = "0"
+				}
+
+				var vote float64
+				if vi.Value == "" {
+					vote = 0
+				} else {
+					vote, err = strconv.ParseFloat(vi.Value, 64)
+					if err != nil {
+						return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+					}
+				}
+				if vi.Rank <= 24 {
+					vi.EstRewardPerYear = strconv.FormatFloat(float64(175834088*0.25/(100000000*36)*365*720+175834088*0.75/(totalVote*100000000)*vote*365*720), 'f', 8, 64)
+				} else if vi.Rank <= 96 {
+					vi.EstRewardPerYear = strconv.FormatFloat(float64(175834088*0.75/(totalVote*100000000)*vote*365*720), 'f', 8, 64)
+				} else {
+					vi.EstRewardPerYear = "0"
+				}
+			}
+			for m := 0; m < len(rst); m++ {
+				ranklisthoderByProducer[strconv.Itoa(int(v.Height))+rst[m].(*chain.Vote_info).Producer_public_key] = m
+			}
+		}
+		var voteInfos []chain.Vote_info
+		for _, pub := range v.Nodes {
+			voteInfos = append(voteInfos, *rst[ranklisthoderByProducer[strconv.Itoa(int(v.Height))+pub]].(*chain.Vote_info))
+		}
+		voteStatistic = append(voteStatistic, chain.Vote_statistic{
+			v,
+			voteInfos,
+		})
+	}
+	return ResponsePackEx(ELEPHANT_SUCCESS, voteStatistic)
+}
+
+//
+func producerRankByHeight(param Params) map[string]interface{} {
+	height, ok := param["height"].(string)
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid height")
+	}
+	h, err := strconv.Atoi(height)
+	if err != nil || h < 0 {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid height")
+	}
+	state, ok := param["state"].(string)
+	if !ok || state != "" && state != "active" && state != "inactive" && state != "pending" &&
+		state != "canceled" && state != "illegal" && state != "returned" {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "state can be one of the folowing values active,inactive,pending,canceled,illegal,returned")
+	}
+	var rst []interface{}
+	if state == "" {
+		rst, err = blockchain2.DBA.ToStruct(`select m.*,(@row_number:=@row_number + 1) as "rank" from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from
+(select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+height+` or
+cancel_height is null) and height <= `+height+` group by producer_public_key) a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey
+order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
+	} else {
+		rst, err = blockchain2.DBA.ToStruct(`select m.*,(@row_number:=@row_number + 1) as "rank" from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from
+(select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+height+` or
+cancel_height is null) and height <= `+height+` group by producer_public_key) a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey where b.state = '`+strings.ToUpper(state[:1])+state[1:]+`'
+order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
+	}
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+	}
+
+	totalVote, err := blockchain2.DBA.ToFloat(`	select sum(a.value)  from (select A.producer_public_key , sum(value) as value from chain_vote_info A where A.cancel_height > ` + height + ` or
+	 cancel_height is null group by producer_public_key order by value desc limit 96) a`)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+	}
+	for _, r := range rst {
+		vi := r.(*chain.Vote_info)
+		addr, err := tools.GetAddress(vi.Ownerpublickey)
+		if err != nil {
+			log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
+			continue
+		}
+		vi.Address = addr
+		//FIXME get it from leveldb
+		val, err := blockchain2.DBA.ToString("select sum(value) from chain_block_transaction_history where txType = 'CoinBase' and address = '" + addr + "'")
+		if err != nil {
+			log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
+			continue
+		}
+		if val != "" {
+			iv, _ := strconv.Atoi(val)
+			vi.Reward = strconv.FormatFloat(float64(iv)/100000000.0, 'f', 8, 64)
+		} else {
+			vi.Reward = "0"
+		}
+
+		var vote float64
+		if vi.Value == "" {
+			vote = 0
+		} else {
+			vote, err = strconv.ParseFloat(vi.Value, 64)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+			}
+		}
+		if vi.Rank <= 24 {
+			vi.EstRewardPerYear = strconv.FormatFloat(float64(175834088*0.25/(100000000*36)*365*720+175834088*0.75/(totalVote*100000000)*vote*365*720), 'f', 8, 64)
+		} else if vi.Rank <= 96 {
+			vi.EstRewardPerYear = strconv.FormatFloat(float64(175834088*0.75/(totalVote*100000000)*vote*365*720), 'f', 8, 64)
+		} else {
+			vi.EstRewardPerYear = "0"
+		}
+	}
+
+	return ResponsePackEx(ELEPHANT_SUCCESS, rst)
+}
+
+func totalVoteByHeight(param Params) map[string]interface{} {
+	height, ok := param["height"].(string)
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid height")
+	}
+	h, err := strconv.Atoi(height)
+	if err != nil || h < 0 {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid height")
+	}
+	rst, err := blockchain2.DBA.ToFloat(`select  sum(value) as value from chain_vote_info a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey  where (cancel_height > ` + height + ` or cancel_height is null) and height <= ` + height + ``)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+	}
+
+	return ResponsePackEx(ELEPHANT_SUCCESS, fmt.Sprintf("%.8f", rst))
+}
+
+func getProducerByTxs(param Params) map[string]interface{} {
+	txids, ok := param["txid"].([]interface{})
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find txid")
+	}
+	type ret struct {
+		Producer interface{}
+		Txid     string
+	}
+	var rst []ret
+	for _, v := range txids {
+		txid := v.(string)
+		tmp := chain.Producer_info{}
+		//TODO the transaction may contains producer that has been canceled
+		producer, err := blockchain2.DBA.ToStruct("select b.* from chain_vote_info a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey where a.txid = '"+txid+"'", tmp)
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
+		}
+		if len(producer) > 0 && producer[0] != nil {
+			rst = append(rst, ret{
+				Producer: producer,
+				Txid:     txid,
+			})
+		}
+	}
+	return ResponsePackEx(ELEPHANT_SUCCESS, rst)
 }

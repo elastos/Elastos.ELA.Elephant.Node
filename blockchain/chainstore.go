@@ -31,12 +31,12 @@ const (
 var (
 	MINING_ADDR  = common2.Uint168{}
 	ELA_ASSET, _ = common2.Uint256FromHexString("a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0")
+	DBA          *common.Dba
 )
 
 type ChainStoreExtend struct {
 	IChainStore
 	IStore
-	sql      *sql.DB
 	chain    *BlockChain
 	taskChEx chan interface{}
 	quitEx   chan chan bool
@@ -53,14 +53,13 @@ func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string)
 	if err != nil {
 		return ChainStoreExtend{}, err
 	}
-	db, err := sql.Open("sqlite3", filePath+"/dpos/dpos.db")
+	DBA, err = common.NewInstance(filePath + "/dpos/dpos.db")
 	if err != nil {
 		log.Fatal(err)
 	}
 	c := ChainStoreExtend{
 		IChainStore: chainstore,
 		IStore:      st,
-		sql:         db,
 		chain:       chain,
 		taskChEx:    make(chan interface{}, 1000),
 		quitEx:      make(chan chan bool, 1),
@@ -154,7 +153,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 	pubks := make(map[common2.Uint168][]byte)
 
 	//process vote
-	db, err := c.sql.Begin()
+	db, err := DBA.Begin()
 	if err != nil {
 		return err
 	}

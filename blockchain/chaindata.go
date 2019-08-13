@@ -107,7 +107,7 @@ func (c *ChainStoreExtend) renewProducer() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var err error
-	db, err := c.sql.Begin()
+	db, err := DBA.Begin()
 	defer func() {
 		if err != nil {
 			log.Errorf("Error renew producer %s", err.Error())
