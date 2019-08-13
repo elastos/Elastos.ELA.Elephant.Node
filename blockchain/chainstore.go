@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/hex"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
@@ -11,6 +12,7 @@ import (
 	. "github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/core/types/outputpayload"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/robfig/cron"
 	"io"
 	"os"
@@ -26,11 +28,16 @@ const (
 	ELA    uint64 = 100000000
 )
 
-var MINING_ADDR = common2.Uint168{}
+var (
+	MINING_ADDR  = common2.Uint168{}
+	ELA_ASSET, _ = common2.Uint256FromHexString("a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0")
+)
 
 type ChainStoreExtend struct {
 	IChainStore
 	IStore
+	sql      *sql.DB
+	chain    *BlockChain
 	taskChEx chan interface{}
 	quitEx   chan chan bool
 	mu       sync.Mutex
@@ -41,14 +48,20 @@ func (c ChainStoreExtend) AddTask(task interface{}) {
 	c.taskChEx <- task
 }
 
-func NewChainStoreEx(chainstore IChainStore, filePath string) (ChainStoreExtend, error) {
+func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string) (ChainStoreExtend, error) {
 	st, err := NewLevelDB(filePath)
 	if err != nil {
 		return ChainStoreExtend{}, err
 	}
+	db, err := sql.Open("sqlite3", filePath+"/dpos/dpos.db")
+	if err != nil {
+		log.Fatal(err)
+	}
 	c := ChainStoreExtend{
 		IChainStore: chainstore,
 		IStore:      st,
+		sql:         db,
+		chain:       chain,
 		taskChEx:    make(chan interface{}, 1000),
 		quitEx:      make(chan chan bool, 1),
 		Cron:        cron.New(),
@@ -56,7 +69,7 @@ func NewChainStoreEx(chainstore IChainStore, filePath string) (ChainStoreExtend,
 	}
 	DefaultChainStoreEx = c
 	go c.loop()
-	go c.initCmc()
+	go c.initTask()
 	return c, nil
 }
 
@@ -64,16 +77,110 @@ func (c ChainStoreExtend) Close() {
 
 }
 
+func processVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) error {
+	for i := 0; i < len(block.Transactions); i++ {
+		tx := block.Transactions[i]
+		version := tx.Version
+		txid, err := common.ReverseHexString(tx.Hash().String())
+		if err != nil {
+			return err
+		}
+		if version == 0x09 {
+			vout := tx.Outputs
+			stmt, err := db.Prepare("insert into chain_vote_info (producer_public_key,vote_type,txid,n,`value`,outputlock,address,block_time,height) values(?,?,?,?,?,?,?,?,?)")
+			if err != nil {
+				return err
+			}
+			for _, v := range vout {
+				if v.Type == 0x01 && v.AssetID == *ELA_ASSET {
+					payload, ok := v.Payload.(*outputpayload.VoteOutput)
+					if !ok || payload == nil {
+						continue
+					}
+					contents := payload.Contents
+					if !ok {
+						continue
+					}
+					value := v.Value.String()
+					n := i
+					address, err := v.ProgramHash.ToAddress()
+					if err != nil {
+						return err
+					}
+					outputlock := v.OutputLock
+					for _, cv := range contents {
+						votetype := cv.VoteType
+						votetypeStr := ""
+						if votetype == 0x00 {
+							votetypeStr = "Delegate"
+						} else if votetype == 0x01 {
+							votetypeStr = "CRC"
+						}
+						candidates := cv.Candidates
+						for _, pub := range candidates {
+							_, err := stmt.Exec(common2.BytesToHexString(pub), votetypeStr, txid, n, value, outputlock, address, block.Header.Timestamp, block.Header.Height)
+							if err != nil {
+								return err
+							}
+							(*voteTxHolder)[txid] = types.Vote
+						}
+					}
+				}
+			}
+			stmt.Close()
+		}
+		// remove canceled vote
+		vin := tx.Inputs
+		stmt, err := db.Prepare("update chain_vote_info set is_valid = 'NO',cancel_height=? where txid = ? and n = ? ")
+		if err != nil {
+			return err
+		}
+		for _, v := range vin {
+			txhash := v.Previous.TxID
+			vout := v.Previous.Index
+			_, err := stmt.Exec(block.Header.Height, txhash, vout)
+			if err != nil {
+				return err
+			}
+		}
+		stmt.Close()
+	}
+	return nil
+}
+
 func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 	txs := block.Transactions
 	txhs := make([]types.TransactionHistory, 0)
 	pubks := make(map[common2.Uint168][]byte)
+
+	//process vote
+	db, err := c.sql.Begin()
+	if err != nil {
+		return err
+	}
+	voteTxHolder := new(map[string]TxType)
+	err = processVote(block, voteTxHolder, db)
+	if err != nil {
+		db.Rollback()
+		return err
+	} else {
+		err = db.Commit()
+		if err != nil {
+			return err
+		}
+	}
+
 	for i := 0; i < len(txs); i++ {
 		tx := txs[i]
+		txid, err := common.ReverseHexString(tx.Hash().String())
+		if err != nil {
+			return err
+		}
 		var memo []byte
 		if len(tx.Attributes) > 0 {
 			memo = tx.Attributes[0].Data
 		}
+
 		if tx.TxType == CoinBase {
 			var to []common2.Uint168
 			hold := make(map[common2.Uint168]uint64)
@@ -115,6 +222,9 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 			isCrossTx := false
 			if tx.TxType == TransferCrossChainAsset {
 				isCrossTx = true
+			}
+			if (*voteTxHolder)[txid] == types.Vote {
+				tx.TxType = types.Vote
 			}
 			spend := make(map[common2.Uint168]int64)
 			var totalInput int64 = 0

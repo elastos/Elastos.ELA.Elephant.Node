@@ -146,13 +146,13 @@ func startNode(c *cli.Context) {
 	if err != nil {
 		printErrorAndExit(err)
 	}
-	var chainStoreEx blockchain2.IChainStoreExtend
-	chainStoreEx, err = blockchain2.NewChainStoreEx(chainStore, filepath.Join(dataDir, "ext"))
-	if err != nil {
-		printErrorAndExit(err)
-	}
-	defer chainStoreEx.CloseEx()
-	defer chainStore.Close()
+	//var chainStoreEx blockchain2.IChainStoreExtend
+	//chainStoreEx, err = blockchain2.NewChainStoreEx(chainStore, filepath.Join(dataDir, "ext"))
+	//if err != nil {
+	//	printErrorAndExit(err)
+	//}
+	//defer chainStoreEx.CloseEx()
+	//defer chainStore.Close()
 	ledger.Store = chainStore // fixme
 
 	dposStore, err = store.NewDposStore(dataDir)
@@ -197,6 +197,15 @@ func startNode(c *cli.Context) {
 	if err != nil {
 		printErrorAndExit(err)
 	}
+
+	var chainStoreEx blockchain2.IChainStoreExtend
+	chainStoreEx, err = blockchain2.NewChainStoreEx(chain, chainStore, filepath.Join(dataDir, "ext"))
+	if err != nil {
+		printErrorAndExit(err)
+	}
+	defer chainStoreEx.CloseEx()
+	defer chainStore.Close()
+
 	ledger.Blockchain = chain // fixme
 	blockMemPool.Chain = chain
 
