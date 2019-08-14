@@ -2014,10 +2014,11 @@ func VoterStatistic(param Params) map[string]interface{} {
 		v := _v.Vote_Header
 		rst, ok := ranklisthoder[v.Height]
 		if !ok {
-			rst, err = blockchain2.DBA.ToStruct(`select m.*,(@row_number:=@row_number + 1) as "rank" from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from 
+			rst, err = blockchain2.DBA.ToStruct(`select m.* from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from 
+chain_producer_info b left join 
 (select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+strconv.Itoa(int(v.Height))+` or
-cancel_height is null) and height <= `+strconv.Itoa(int(v.Height))+` group by producer_public_key) a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey 
-order by value desc) m ,  (SELECT @row_number:=0) AS t`, types.Vote_info{})
+cancel_height is null) and height <= `+strconv.Itoa(int(v.Height))+` group by producer_public_key) a on a.producer_public_key = b.ownerpublickey 
+order by value desc) m`, types.Vote_info{})
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 			}
@@ -2026,7 +2027,7 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t`, types.Vote_info{})
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 			}
-			for _, r := range rst {
+			for i, r := range rst {
 				vi := r.(*types.Vote_info)
 				public, _ := hex.DecodeString(vi.Ownerpublickey)
 				addr, err := common2.GetAddress(public)
@@ -2035,6 +2036,7 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t`, types.Vote_info{})
 					continue
 				}
 				vi.Address = addr
+				vi.Rank = int64(i + 1)
 				val, err := blockchain2.DefaultChainStoreEx.GetDposRewardByHeight(addr, uint32(v.Height))
 				if err != nil {
 					log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
@@ -2085,21 +2087,23 @@ func ProducerRankByHeight(param Params) map[string]interface{} {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid height")
 	}
 	state, ok := param["state"].(string)
-	if !ok || state != "" && state != "active" && state != "inactive" && state != "pending" &&
+	if state != "" && state != "active" && state != "inactive" && state != "pending" &&
 		state != "canceled" && state != "illegal" && state != "returned" {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "state can be one of the folowing values active,inactive,pending,canceled,illegal,returned")
 	}
 	var rst []interface{}
 	if state == "" {
-		rst, err = blockchain2.DBA.ToStruct(`select m.*,(@row_number:=@row_number + 1) as "rank" from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from
+		rst, err = blockchain2.DBA.ToStruct(`select m.* from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from
+chain_producer_info b left join 
 (select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+height+` or
-cancel_height is null) and height <= `+height+` group by producer_public_key) a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey
-order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
+cancel_height is null) and height <= `+height+` group by producer_public_key) a on a.producer_public_key = b.ownerpublickey
+order by value desc) m `, types.Vote_info{})
 	} else {
-		rst, err = blockchain2.DBA.ToStruct(`select m.*,(@row_number:=@row_number + 1) as "rank" from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from
+		rst, err = blockchain2.DBA.ToStruct(`select m.* from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from
+chain_producer_info b left join 
 (select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+height+` or
-cancel_height is null) and height <= `+height+` group by producer_public_key) a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey where b.state = '`+strings.ToUpper(state[:1])+state[1:]+`'
-order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
+cancel_height is null) and height <= `+height+` group by producer_public_key) a on a.producer_public_key = b.ownerpublickey where b.state = '`+strings.ToUpper(state[:1])+state[1:]+`'
+order by value desc) m `, types.Vote_info{})
 	}
 	if err != nil {
 		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
@@ -2110,7 +2114,7 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
 	if err != nil {
 		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 	}
-	for _, r := range rst {
+	for i, r := range rst {
 		vi := r.(*types.Vote_info)
 		public, _ := hex.DecodeString(vi.Ownerpublickey)
 		addr, err := common2.GetAddress(public)
@@ -2125,6 +2129,7 @@ order by value desc) m ,  (SELECT @row_number:=0) AS t `, types.Vote_info{})
 			continue
 		}
 		vi.Reward = val.String()
+		vi.Rank = int64(i + 1)
 		var vote float64
 		if vi.Value == "" {
 			vote = 0
@@ -2155,7 +2160,7 @@ func TotalVoteByHeight(param Params) map[string]interface{} {
 	if err != nil || h < 0 {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "invalid height")
 	}
-	rst, err := blockchain2.DBA.ToFloat(`select  sum(value) as value from chain_vote_info a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey  where (cancel_height > ` + height + ` or cancel_height is null) and height <= ` + height + ``)
+	rst, err := blockchain2.DBA.ToFloat(`select  sum(value) as value from chain_producer_info b left join chain_vote_info a on a.producer_public_key = b.ownerpublickey  where (cancel_height > ` + height + ` or cancel_height is null) and height <= ` + height + ``)
 	if err != nil {
 		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 	}
@@ -2176,7 +2181,7 @@ func GetProducerByTxs(param Params) map[string]interface{} {
 	for _, v := range txids {
 		txid := v.(string)
 		tmp := types.Producer_info{}
-		producer, err := blockchain2.DBA.ToStruct("select b.* from chain_vote_info a right join chain_producer_info b on a.producer_public_key = b.ownerpublickey where a.txid = '"+txid+"'", tmp)
+		producer, err := blockchain2.DBA.ToStruct("select b.* from chain_producer_info b left join chain_vote_info a on a.producer_public_key = b.ownerpublickey where a.txid = '"+txid+"'", tmp)
 		if err != nil {
 			return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 		}

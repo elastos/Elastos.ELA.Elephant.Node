@@ -23,14 +23,15 @@ import (
 )
 
 const (
-	INCOME string = "income"
-	SPEND  string = "spend"
-	ELA    uint64 = 100000000
+	INCOME           string = "income"
+	SPEND            string = "spend"
+	ELA              uint64 = 100000000
+	DPOS_CHECK_POINT        = 290000
 )
 
 var (
 	MINING_ADDR  = common2.Uint168{}
-	ELA_ASSET, _ = common2.Uint256FromHexString("a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0")
+	ELA_ASSET, _ = common2.Uint256FromHexString("b037db964a231458d2d6ffd5ea18944c4f90e63d547c5d3b9874df66a4ead0a3")
 	DBA          *common.Dba
 )
 
@@ -53,9 +54,15 @@ func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string)
 	if err != nil {
 		return ChainStoreExtend{}, err
 	}
-	DBA, err = common.NewInstance(filePath + "/dpos/dpos.db")
+	DBA, err = common.NewInstance(filePath)
 	if err != nil {
 		log.Fatal(err)
+		return ChainStoreExtend{}, err
+	}
+	err = common.InitDb(DBA)
+	if err != nil {
+		log.Fatal(err)
+		return ChainStoreExtend{}, err
 	}
 	c := ChainStoreExtend{
 		IChainStore: chainstore,
@@ -135,7 +142,7 @@ func processVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) erro
 			return err
 		}
 		for _, v := range vin {
-			txhash := v.Previous.TxID
+			txhash, _ := common.ReverseHexString(v.Previous.TxID.String())
 			vout := v.Previous.Index
 			_, err := stmt.Exec(block.Header.Height, txhash, vout)
 			if err != nil {
@@ -149,19 +156,21 @@ func processVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) erro
 
 func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 	//process vote
-	db, err := DBA.Begin()
-	if err != nil {
-		return err
-	}
-	voteTxHolder := new(map[string]TxType)
-	err = processVote(block, voteTxHolder, db)
-	if err != nil {
-		db.Rollback()
-		return err
-	} else {
-		err = db.Commit()
+	voteTxHolder := make(map[string]TxType)
+	if block.Height >= DPOS_CHECK_POINT {
+		db, err := DBA.Begin()
 		if err != nil {
 			return err
+		}
+		err = processVote(block, &voteTxHolder, db)
+		if err != nil {
+			db.Rollback()
+			return err
+		} else {
+			err = db.Commit()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -226,7 +235,7 @@ func (c ChainStoreExtend) persistTxHistory(block *Block) error {
 			if tx.TxType == TransferCrossChainAsset {
 				isCrossTx = true
 			}
-			if (*voteTxHolder)[txid] == types.Vote {
+			if voteTxHolder[txid] == types.Vote {
 				tx.TxType = types.Vote
 			}
 			spend := make(map[common2.Uint168]int64)
@@ -372,7 +381,7 @@ func (c ChainStoreExtend) loop() {
 			case *Block:
 				err := c.persistTxHistory(kind)
 				if err != nil {
-					log.Error("Error persist transaction history %s", err.Error())
+					log.Errorf("Error persist transaction history %s", err.Error())
 					os.Exit(-1)
 				}
 				tcall := float64(time.Now().Sub(now)) / float64(time.Second)

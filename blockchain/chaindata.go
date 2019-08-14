@@ -133,52 +133,55 @@ func (c ChainStoreExtend) initTask() {
 }
 
 func (c *ChainStoreExtend) renewProducer() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	var err error
-	db, err := DBA.Begin()
-	defer func() {
-		if err != nil {
-			log.Errorf("Error renew producer %s", err.Error())
-			db.Rollback()
-		} else {
-			db.Commit()
-		}
-	}()
-	if err != nil {
-		return
-	}
-	stmt1, err := db.Prepare("delete from chain_producer_info")
-	if err != nil {
-		return
-	}
-	_, err = stmt1.Exec()
-	if err != nil {
-		return
-	}
-	stmt1.Close()
-
-	stmt, err := db.Prepare("insert into chain_producer_info (Ownerpublickey,Nodepublickey,Nickname,Url,Location,Active,Votes,Netaddress,State,Registerheight,Cancelheight,Inactiveheight,Illegalheight,`Index`) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-	if err != nil {
-		return
-	}
-	producers := c.chain.GetState().GetAllProducers()
-	for i, producer := range producers {
-		var active int
-		if producer.State() == state.Active {
-			active = 1
-		} else {
-			active = 0
-		}
-		_, err = stmt.Exec(common.BytesToHexString(producer.OwnerPublicKey()), common.BytesToHexString(producer.NodePublicKey()),
-			producer.Info().NickName, producer.Info().Url, producer.Info().Location, active, producer.Votes().String(),
-			producer.Info().NetAddress, producer.State().String(), producer.RegisterHeight(), producer.CancelHeight(),
-			producer.InactiveSince(), producer.IllegalHeight(), i)
+	if DefaultChainStoreEx.GetHeight() >= 290000 {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		var err error
+		db, err := DBA.Begin()
+		defer func() {
+			if err != nil {
+				log.Errorf("Error renew producer %s", err.Error())
+				db.Rollback()
+			} else {
+				log.Info("commit renew producer")
+				db.Commit()
+			}
+		}()
 		if err != nil {
 			return
 		}
+		stmt1, err := db.Prepare("delete from chain_producer_info")
+		if err != nil {
+			return
+		}
+		_, err = stmt1.Exec()
+		if err != nil {
+			return
+		}
+		stmt1.Close()
+
+		stmt, err := db.Prepare("insert into chain_producer_info (Ownerpublickey,Nodepublickey,Nickname,Url,Location,Active,Votes,Netaddress,State,Registerheight,Cancelheight,Inactiveheight,Illegalheight,`Index`) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+		if err != nil {
+			return
+		}
+		producers := c.chain.GetState().GetAllProducers()
+		for i, producer := range producers {
+			var active int
+			if producer.State() == state.Active {
+				active = 1
+			} else {
+				active = 0
+			}
+			_, err = stmt.Exec(common.BytesToHexString(producer.OwnerPublicKey()), common.BytesToHexString(producer.NodePublicKey()),
+				producer.Info().NickName, producer.Info().Url, producer.Info().Location, active, producer.Votes().String(),
+				producer.Info().NetAddress, producer.State().String(), producer.RegisterHeight(), producer.CancelHeight(),
+				producer.InactiveSince(), producer.IllegalHeight(), i)
+			if err != nil {
+				return
+			}
+		}
+		stmt.Close()
 	}
-	stmt.Close()
 }
 
 func (c *ChainStoreExtend) renewCmcPrice() {

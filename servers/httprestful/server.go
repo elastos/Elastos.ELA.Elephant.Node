@@ -198,13 +198,13 @@ func (rt *restServer) getPath(url string) string {
 		return ApiGetPublicKey
 	} else if strings.Contains(url, strings.TrimRight(ApiGetBalance, ":addr")) {
 		return ApiGetBalance
-	} else if strings.Contains(url, strings.TrimRight(ApiProducerStatistic, ":producer/:height")) {
+	} else if strings.Contains(url, strings.TrimSuffix(ApiProducerStatistic, ":producer/:height")) {
 		return ApiProducerStatistic
-	} else if strings.Contains(url, strings.TrimRight(ApiVoterStatistic, ":addr")) {
+	} else if strings.Contains(url, strings.TrimSuffix(ApiVoterStatistic, ":addr")) {
 		return ApiVoterStatistic
-	} else if strings.Contains(url, strings.TrimRight(ApiProducerRankByHeight, ":height")) {
+	} else if strings.Contains(url, strings.TrimSuffix(ApiProducerRankByHeight, ":height")) {
 		return ApiProducerRankByHeight
-	} else if strings.Contains(url, strings.TrimRight(ApiTotalVoteByHeight, ":height")) {
+	} else if strings.Contains(url, strings.TrimSuffix(ApiTotalVoteByHeight, ":height")) {
 		return ApiTotalVoteByHeight
 	}
 	return url

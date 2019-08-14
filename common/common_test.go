@@ -10,4 +10,7 @@ func Test_getAddress(t *testing.T) {
 	s, _ := GetProgramHash(b)
 	addr, _ := s.ToAddress()
 	println(addr)
+
+	str, _ := ReverseHexString("a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0")
+	println(str)
 }
