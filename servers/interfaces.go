@@ -2016,9 +2016,9 @@ func VoterStatistic(param Params) map[string]interface{} {
 		if !ok {
 			rst, err = blockchain2.DBA.ToStruct(`select m.* from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from 
 chain_producer_info b left join 
-(select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+strconv.Itoa(int(v.Height))+` or
+(select A.producer_public_key , cast(ROUND(sum(value),8) as text) as value from chain_vote_info A where (A.cancel_height > `+strconv.Itoa(int(v.Height))+` or
 cancel_height is null) and height <= `+strconv.Itoa(int(v.Height))+` group by producer_public_key) a on a.producer_public_key = b.ownerpublickey 
-order by value desc) m`, types.Vote_info{})
+order by value * 100000000  desc) m`, types.Vote_info{})
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
 			}
@@ -2095,15 +2095,15 @@ func ProducerRankByHeight(param Params) map[string]interface{} {
 	if state == "" {
 		rst, err = blockchain2.DBA.ToStruct(`select m.* from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from
 chain_producer_info b left join 
-(select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+height+` or
+(select A.producer_public_key , cast(ROUND(sum(value),8) as text) as value from chain_vote_info A where (A.cancel_height > `+height+` or
 cancel_height is null) and height <= `+height+` group by producer_public_key) a on a.producer_public_key = b.ownerpublickey
-order by value desc) m `, types.Vote_info{})
+order by value * 100000000 desc) m `, types.Vote_info{})
 	} else {
 		rst, err = blockchain2.DBA.ToStruct(`select m.* from (select ifnull(a.producer_public_key,b.ownerpublickey) as producer_public_key , ifnull(a.value,0) as value , b.* from
 chain_producer_info b left join 
-(select A.producer_public_key , ROUND(sum(value),8) as value from chain_vote_info A where (A.cancel_height > `+height+` or
+(select A.producer_public_key , cast(ROUND(sum(value),8) as text) as value from chain_vote_info A where (A.cancel_height > `+height+` or
 cancel_height is null) and height <= `+height+` group by producer_public_key) a on a.producer_public_key = b.ownerpublickey where b.state = '`+strings.ToUpper(state[:1])+state[1:]+`'
-order by value desc) m `, types.Vote_info{})
+order by value * 100000000  desc) m `, types.Vote_info{})
 	}
 	if err != nil {
 		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())

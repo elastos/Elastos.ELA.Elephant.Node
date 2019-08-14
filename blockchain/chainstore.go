@@ -97,7 +97,7 @@ func processVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) erro
 			if err != nil {
 				return err
 			}
-			for _, v := range vout {
+			for n, v := range vout {
 				if v.Type == 0x01 && v.AssetID == *ELA_ASSET {
 					payload, ok := v.Payload.(*outputpayload.VoteOutput)
 					if !ok || payload == nil {
@@ -108,7 +108,6 @@ func processVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) erro
 						continue
 					}
 					value := v.Value.String()
-					n := i
 					address, err := v.ProgramHash.ToAddress()
 					if err != nil {
 						return err
