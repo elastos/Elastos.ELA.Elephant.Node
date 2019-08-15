@@ -128,7 +128,11 @@ func (c ChainStoreExtend) doPersistTransactionHistory(i uint64, history types.Tr
 
 func (c ChainStoreExtend) initTask() {
 	c.AddFunc("@every "+common2.Conf.Cmc.Inteval, c.renewCmcPrice)
-	c.AddFunc("@every 1m", c.renewProducer)
+	c.AddFunc("@every 2m", func() {
+		if len(c.rp) == 0 {
+			c.rp <- true
+		}
+	})
 	c.Start()
 }
 

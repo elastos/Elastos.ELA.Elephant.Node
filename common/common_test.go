@@ -13,4 +13,13 @@ func Test_getAddress(t *testing.T) {
 
 	str, _ := ReverseHexString("a3d0eaa466df74983b5d7c543de6904f4c9418ead5ffd6d25814234a96db37b0")
 	println(str)
+	c := make(chan bool, 1)
+	println("chan ", len(c))
+	c <- true
+	println("chan ", len(c))
+	v := <-c
+	println("chan ", len(c), v)
+	defer println(1)
+	defer println(2)
+
 }

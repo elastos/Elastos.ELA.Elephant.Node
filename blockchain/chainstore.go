@@ -15,7 +15,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/robfig/cron"
 	"io"
-	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -43,6 +42,7 @@ type ChainStoreExtend struct {
 	quitEx   chan chan bool
 	mu       sync.Mutex
 	*cron.Cron
+	rp chan bool
 }
 
 func (c ChainStoreExtend) AddTask(task interface{}) {
@@ -68,10 +68,11 @@ func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string)
 		IChainStore: chainstore,
 		IStore:      st,
 		chain:       chain,
-		taskChEx:    make(chan interface{}, 1000),
+		taskChEx:    make(chan interface{}, 100),
 		quitEx:      make(chan chan bool, 1),
 		Cron:        cron.New(),
 		mu:          sync.Mutex{},
+		rp:          make(chan bool, 1),
 	}
 	DefaultChainStoreEx = c
 	go c.loop()
@@ -83,7 +84,31 @@ func (c ChainStoreExtend) Close() {
 
 }
 
-func processVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) error {
+func (c ChainStoreExtend) processVote(block *Block, voteTxHolder *map[string]TxType) error {
+	if block.Height >= DPOS_CHECK_POINT {
+		db, err := DBA.Begin()
+		if err != nil {
+			return err
+		}
+		err = doProcessVote(block, voteTxHolder, db)
+		if err != nil {
+			db.Rollback()
+			return err
+		} else {
+			err = db.Commit()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if len(c.rp) > 0 {
+		c.renewProducer()
+		<-c.rp
+	}
+	return nil
+}
+
+func doProcessVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) error {
 	for i := 0; i < len(block.Transactions); i++ {
 		tx := block.Transactions[i]
 		version := tx.Version
@@ -154,25 +179,15 @@ func processVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) erro
 }
 
 func (c ChainStoreExtend) persistTxHistory(block *Block) error {
+	if block.Height%10 == 0 {
+		log.Infof("Tx history height : %d ", block.Height)
+	}
 	//process vote
 	voteTxHolder := make(map[string]TxType)
-	if block.Height >= DPOS_CHECK_POINT {
-		db, err := DBA.Begin()
-		if err != nil {
-			return err
-		}
-		err = processVote(block, &voteTxHolder, db)
-		if err != nil {
-			db.Rollback()
-			return err
-		} else {
-			err = db.Commit()
-			if err != nil {
-				return err
-			}
-		}
+	err := c.processVote(block, &voteTxHolder)
+	if err != nil {
+		return err
 	}
-
 	txs := block.Transactions
 	txhs := make([]types.TransactionHistory, 0)
 	pubks := make(map[common2.Uint168][]byte)
@@ -381,7 +396,6 @@ func (c ChainStoreExtend) loop() {
 				err := c.persistTxHistory(kind)
 				if err != nil {
 					log.Errorf("Error persist transaction history %s", err.Error())
-					os.Exit(-1)
 				}
 				tcall := float64(time.Now().Sub(now)) / float64(time.Second)
 				log.Debugf("handle SaveHistory time cost: %g num transactions:%d", tcall, len(kind.Transactions))

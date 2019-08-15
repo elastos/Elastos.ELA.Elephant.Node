@@ -196,8 +196,8 @@ func startNode(c *cli.Context) {
 	if err != nil {
 		printErrorAndExit(err)
 	}
-	defer chainStoreEx.CloseEx()
 	defer chainStore.Close()
+	defer chainStoreEx.CloseEx()
 
 	ledger.Blockchain = chain // fixme
 	blockMemPool.Chain = chain

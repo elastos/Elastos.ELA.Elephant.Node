@@ -1589,9 +1589,16 @@ func GetHistory(param Params) map[string]interface{} {
 	ok1 := param.HasKey("pageSize")
 	if !ok && !ok1 {
 		txhs := blockchain2.DefaultChainStoreEx.GetTxHistory(addr, order)
+		var len int
+		switch txhs.(type) {
+		case types.TransactionHistorySorter:
+			len = txhs.(types.TransactionHistorySorter).Len()
+		case types.TransactionHistorySorterDesc:
+			len = txhs.(types.TransactionHistorySorterDesc).Len()
+		}
 		thr := types.ThResult{
 			History:  txhs,
-			TotalNum: len(txhs.([]types.TransactionHistoryDisplay)),
+			TotalNum: len,
 		}
 		return ResponsePackEx(ELEPHANT_SUCCESS, thr)
 	} else if ok && ok1 {
