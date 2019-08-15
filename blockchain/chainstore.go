@@ -165,6 +165,10 @@ func doProcessVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) er
 		}
 		// remove canceled vote
 		vin := tx.Inputs
+		prepStat, err := db.Prepare("select * from chain_vote_info where txid = ? and n = ?")
+		if err != nil {
+			return err
+		}
 		stmt, err := db.Prepare("update chain_vote_info set is_valid = 'NO',cancel_height=? where txid = ? and n = ? ")
 		if err != nil {
 			return err
@@ -172,9 +176,15 @@ func doProcessVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) er
 		for _, v := range vin {
 			txhash, _ := common.ReverseHexString(v.Previous.TxID.String())
 			vout := v.Previous.Index
-			_, err := stmt.Exec(block.Header.Height, txhash, vout)
+			r, err := prepStat.Query(txhash, vout)
 			if err != nil {
 				return err
+			}
+			if !r.Next() {
+				_, err = stmt.Exec(block.Header.Height, txhash, vout)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		stmt.Close()
