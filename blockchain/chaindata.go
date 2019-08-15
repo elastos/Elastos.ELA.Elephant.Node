@@ -12,7 +12,6 @@ import (
 	"github.com/elastos/Elastos.ELA/dpos/state"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 )
 
@@ -39,7 +38,7 @@ func (c ChainStoreExtend) persistTransactionHistory(txhs []types.TransactionHist
 		if err != nil {
 			c.rollback()
 			log.Fatal("Error persist transaction history")
-			os.Exit(-1)
+			return err
 		}
 	}
 	c.commit()
@@ -55,7 +54,7 @@ func (c ChainStoreExtend) persistPbks(pbks map[common.Uint168][]byte) error {
 		if err != nil {
 			c.rollback()
 			log.Fatal("Error persist public keys")
-			os.Exit(-1)
+			return err
 		}
 	}
 	c.commit()
@@ -69,10 +68,56 @@ func (c ChainStoreExtend) persistDposReward(rewardDpos map[common.Uint168]common
 		if err != nil {
 			c.rollback()
 			log.Fatal("Error persist dpos reward")
-			os.Exit(-1)
+			return err
 		}
 	}
 	c.commit()
+	return nil
+}
+
+func (c ChainStoreExtend) persistBestHeight(height uint32) error {
+	bestHeight, err := c.GetBestHeightExt()
+	if (err == nil && bestHeight < height) || err != nil {
+		c.begin()
+		err = c.doPersistBestHeight(height)
+		if err != nil {
+			c.rollback()
+			log.Fatal("Error persist best height")
+			return err
+		}
+		c.commit()
+	}
+	return nil
+}
+
+func (c ChainStoreExtend) persistStoredHeight(height uint32) error {
+	c.begin()
+	err := c.doPersistStoredHeight(height)
+	if err != nil {
+		c.rollback()
+		log.Fatal("Error persist best height")
+		return err
+	}
+	c.commit()
+	return nil
+}
+
+func (c ChainStoreExtend) doPersistStoredHeight(h uint32) error {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataStoredHeightPrefix))
+	common.WriteUint32(key, h)
+	value := new(bytes.Buffer)
+	common.WriteVarBytes(value, []byte{1})
+	c.BatchPut(key.Bytes(), value.Bytes())
+	return nil
+}
+
+func (c ChainStoreExtend) doPersistBestHeight(h uint32) error {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataBestHeightPrefix))
+	value := new(bytes.Buffer)
+	common.WriteUint32(value, h)
+	c.BatchPut(key.Bytes(), value.Bytes())
 	return nil
 }
 

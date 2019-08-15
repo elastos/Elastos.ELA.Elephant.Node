@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/hex"
+	"sync/atomic"
 	"testing"
 )
 
@@ -22,4 +23,21 @@ func Test_getAddress(t *testing.T) {
 	defer println(1)
 	defer println(2)
 
+	c1 := make(chan int32, 1000)
+
+	var i int32 = 0
+	go func() {
+		for i = 0; i < 2000; {
+			go func() {
+				c1 <- atomic.AddInt32(&i, 1)
+			}()
+		}
+	}()
+
+	for {
+		select {
+		case d := <-c1:
+			println(d)
+		}
+	}
 }

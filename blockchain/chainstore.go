@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"database/sql"
+	"encoding/binary"
 	"encoding/hex"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
@@ -22,10 +23,11 @@ import (
 )
 
 const (
-	INCOME           string = "income"
-	SPEND            string = "spend"
-	ELA              uint64 = 100000000
-	DPOS_CHECK_POINT        = 290000
+	INCOME                      string = "income"
+	SPEND                       string = "spend"
+	ELA                         uint64 = 100000000
+	DPOS_CHECK_POINT                   = 290000
+	CHECK_POINT_ROLLBACK_HEIGHT        = 100
 )
 
 var (
@@ -42,29 +44,30 @@ type ChainStoreExtend struct {
 	quitEx   chan chan bool
 	mu       sync.Mutex
 	*cron.Cron
-	rp chan bool
+	rp         chan bool
+	checkPoint bool
 }
 
-func (c ChainStoreExtend) AddTask(task interface{}) {
+func (c *ChainStoreExtend) AddTask(task interface{}) {
 	c.taskChEx <- task
 }
 
-func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string) (ChainStoreExtend, error) {
+func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string) (*ChainStoreExtend, error) {
 	st, err := NewLevelDB(filePath)
 	if err != nil {
-		return ChainStoreExtend{}, err
+		return nil, err
 	}
 	DBA, err = common.NewInstance(filePath)
 	if err != nil {
 		log.Fatal(err)
-		return ChainStoreExtend{}, err
+		return nil, err
 	}
 	err = common.InitDb(DBA)
 	if err != nil {
 		log.Fatal(err)
-		return ChainStoreExtend{}, err
+		return nil, err
 	}
-	c := ChainStoreExtend{
+	c := &ChainStoreExtend{
 		IChainStore: chainstore,
 		IStore:      st,
 		chain:       chain,
@@ -73,6 +76,7 @@ func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string)
 		Cron:        cron.New(),
 		mu:          sync.Mutex{},
 		rp:          make(chan bool, 1),
+		checkPoint:  true,
 	}
 	DefaultChainStoreEx = c
 	go c.loop()
@@ -80,11 +84,11 @@ func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string)
 	return c, nil
 }
 
-func (c ChainStoreExtend) Close() {
+func (c *ChainStoreExtend) Close() {
 
 }
 
-func (c ChainStoreExtend) processVote(block *Block, voteTxHolder *map[string]TxType) error {
+func (c *ChainStoreExtend) processVote(block *Block, voteTxHolder *map[string]TxType) error {
 	if block.Height >= DPOS_CHECK_POINT {
 		db, err := DBA.Begin()
 		if err != nil {
@@ -178,207 +182,238 @@ func doProcessVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) er
 	return nil
 }
 
-func (c ChainStoreExtend) persistTxHistory(block *Block) error {
-	if block.Height%10 == 0 {
-		log.Infof("Tx history height : %d ", block.Height)
+func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
+	var blocks []*Block
+	if c.checkPoint {
+		var rollbackStart uint32 = 0
+		bestHeight, err := c.GetBestHeightExt()
+		if err == nil && bestHeight > CHECK_POINT_ROLLBACK_HEIGHT {
+			rollbackStart = bestHeight - CHECK_POINT_ROLLBACK_HEIGHT
+		}
+		for i := rollbackStart; i < blk.Height; i++ {
+			blockHash, err := c.GetBlockHash(i)
+			if err != nil {
+				return err
+			}
+			b, err := c.GetBlock(blockHash)
+			if err != nil {
+				return err
+			}
+			blocks = append(blocks, b)
+		}
+		c.checkPoint = false
+		log.Infof("Checkpoint at height : %d", rollbackStart)
 	}
-	//process vote
-	voteTxHolder := make(map[string]TxType)
-	err := c.processVote(block, &voteTxHolder)
-	if err != nil {
-		return err
-	}
-	txs := block.Transactions
-	txhs := make([]types.TransactionHistory, 0)
-	pubks := make(map[common2.Uint168][]byte)
-	dposReward := make(map[common2.Uint168]common2.Fixed64)
+	blocks = append(blocks, blk)
 
-	for i := 0; i < len(txs); i++ {
-		tx := txs[i]
-		txid, err := common.ReverseHexString(tx.Hash().String())
+	for _, block := range blocks {
+		_, err := c.GetStoredHeightExt(block.Height)
+		if err == nil {
+			continue
+		}
+		if block.Height%100 == 0 {
+			log.Infof("History height : %d ", block.Height)
+		}
+		//process vote
+		voteTxHolder := make(map[string]TxType)
+		err = c.processVote(block, &voteTxHolder)
 		if err != nil {
 			return err
 		}
-		var memo []byte
-		if len(tx.Attributes) > 0 {
-			memo = tx.Attributes[0].Data
-		}
-		if tx.TxType == CoinBase {
-			var to []common2.Uint168
-			hold := make(map[common2.Uint168]uint64)
-			txhscoinbase := make([]types.TransactionHistory, 0)
-			for i, vout := range tx.Outputs {
-				if !common.ContainsU168(vout.ProgramHash, to) {
-					to = append(to, vout.ProgramHash)
+		txs := block.Transactions
+		txhs := make([]types.TransactionHistory, 0)
+		pubks := make(map[common2.Uint168][]byte)
+		dposReward := make(map[common2.Uint168]common2.Fixed64)
+
+		for i := 0; i < len(txs); i++ {
+			tx := txs[i]
+			txid, err := common.ReverseHexString(tx.Hash().String())
+			if err != nil {
+				return err
+			}
+			var memo []byte
+			if len(tx.Attributes) > 0 {
+				memo = tx.Attributes[0].Data
+			}
+			if tx.TxType == CoinBase {
+				var to []common2.Uint168
+				hold := make(map[common2.Uint168]uint64)
+				txhscoinbase := make([]types.TransactionHistory, 0)
+				for i, vout := range tx.Outputs {
+					if !common.ContainsU168(vout.ProgramHash, to) {
+						to = append(to, vout.ProgramHash)
+						txh := types.TransactionHistory{}
+						txh.Address = vout.ProgramHash
+						txh.Inputs = []common2.Uint168{MINING_ADDR}
+						txh.TxType = tx.TxType
+						txh.Txid = tx.Hash()
+						txh.Height = uint64(block.Height)
+						txh.CreateTime = uint64(block.Header.Timestamp)
+						txh.Type = []byte(INCOME)
+						txh.Fee = 0
+						txh.Memo = memo
+						hold[vout.ProgramHash] = uint64(vout.Value)
+						txhscoinbase = append(txhscoinbase, txh)
+					} else {
+						hold[vout.ProgramHash] += uint64(vout.Value)
+					}
+					// dpos reward
+					if i > 1 {
+						dposReward[vout.ProgramHash] = vout.Value
+					}
+				}
+				for i := 0; i < len(txhscoinbase); i++ {
+					txhscoinbase[i].Outputs = []common2.Uint168{txhscoinbase[i].Address}
+					txhscoinbase[i].Value = hold[txhscoinbase[i].Address]
+				}
+				txhs = append(txhs, txhscoinbase...)
+			} else {
+				for _, program := range tx.Programs {
+					code := program.Code
+					programHash, err := common.GetProgramHash(code[1 : len(code)-1])
+					if err != nil {
+						continue
+					}
+					pubks[*programHash] = code[1 : len(code)-1]
+				}
+
+				isCrossTx := false
+				if tx.TxType == TransferCrossChainAsset {
+					isCrossTx = true
+				}
+				if voteTxHolder[txid] == types.Vote {
+					tx.TxType = types.Vote
+				}
+				spend := make(map[common2.Uint168]int64)
+				var totalInput int64 = 0
+				var from []common2.Uint168
+				var to []common2.Uint168
+				for _, input := range tx.Inputs {
+					txid := input.Previous.TxID
+					index := input.Previous.Index
+					referTx, _, err := c.GetTransaction(txid)
+					if err != nil {
+						return err
+					}
+					address := referTx.Outputs[index].ProgramHash
+					totalInput += int64(referTx.Outputs[index].Value)
+					v, ok := spend[address]
+					if ok {
+						spend[address] = v + int64(referTx.Outputs[index].Value)
+					} else {
+						spend[address] = int64(referTx.Outputs[index].Value)
+					}
+					if !common.ContainsU168(address, from) {
+						from = append(from, address)
+					}
+				}
+				receive := make(map[common2.Uint168]int64)
+				var totalOutput int64 = 0
+				vote := outputpayload.VoteOutput{}
+				for _, output := range tx.Outputs {
+					outputPayload := output.Payload
+					if tx.TxType != types.Vote && outputPayload != nil && outputPayload.Validate() == nil {
+						var buf bytes.Buffer
+						err := outputPayload.Deserialize(&buf)
+						if err == nil || err == io.EOF {
+							err = vote.Serialize(&buf)
+							if err == nil || err == io.EOF {
+								tx.TxType = types.Vote
+							}
+						}
+					}
+
+					address, _ := output.ProgramHash.ToAddress()
+					var valueCross int64
+					if isCrossTx == true && (output.ProgramHash == MINING_ADDR || strings.Index(address, "X") == 0 || address == "4oLvT2") {
+						switch pl := tx.Payload.(type) {
+						case *payload.TransferCrossChainAsset:
+							valueCross = int64(pl.CrossChainAmounts[0])
+						}
+					}
+					if valueCross != 0 {
+						totalOutput += valueCross
+					} else {
+						totalOutput += int64(output.Value)
+					}
+					v, ok := receive[output.ProgramHash]
+					if ok {
+						receive[output.ProgramHash] = v + int64(output.Value)
+					} else {
+						receive[output.ProgramHash] = int64(output.Value)
+					}
+					if !common.ContainsU168(output.ProgramHash, to) {
+						to = append(to, output.ProgramHash)
+					}
+				}
+				fee := totalInput - totalOutput
+				for k, r := range receive {
+					transferType := INCOME
+					s, ok := spend[k]
+					var value int64
+					if ok {
+						if s > r {
+							value = s - r
+							transferType = SPEND
+						} else {
+							value = r - s
+						}
+						delete(spend, k)
+					} else {
+						value = r
+					}
+					var realFee uint64 = uint64(fee)
+					if transferType == INCOME {
+						realFee = 0
+						to = []common2.Uint168{k}
+					}
+
+					if transferType == SPEND {
+						from = []common2.Uint168{k}
+					}
+
 					txh := types.TransactionHistory{}
-					txh.Address = vout.ProgramHash
-					txh.Inputs = []common2.Uint168{MINING_ADDR}
+					txh.Value = uint64(value)
+					txh.Address = k
+					txh.Inputs = from
 					txh.TxType = tx.TxType
 					txh.Txid = tx.Hash()
 					txh.Height = uint64(block.Height)
 					txh.CreateTime = uint64(block.Header.Timestamp)
-					txh.Type = []byte(INCOME)
-					txh.Fee = 0
+					txh.Type = []byte(transferType)
+					txh.Fee = realFee
+					txh.Outputs = to
 					txh.Memo = memo
-					hold[vout.ProgramHash] = uint64(vout.Value)
-					txhscoinbase = append(txhscoinbase, txh)
-				} else {
-					hold[vout.ProgramHash] += uint64(vout.Value)
-				}
-				// dpos reward
-				if i > 1 {
-					dposReward[vout.ProgramHash] = vout.Value
-				}
-			}
-			for i := 0; i < len(txhscoinbase); i++ {
-				txhscoinbase[i].Outputs = []common2.Uint168{txhscoinbase[i].Address}
-				txhscoinbase[i].Value = hold[txhscoinbase[i].Address]
-			}
-			txhs = append(txhs, txhscoinbase...)
-		} else {
-			for _, program := range tx.Programs {
-				code := program.Code
-				programHash, err := common.GetProgramHash(code[1 : len(code)-1])
-				if err != nil {
-					continue
-				}
-				pubks[*programHash] = code[1 : len(code)-1]
-			}
-
-			isCrossTx := false
-			if tx.TxType == TransferCrossChainAsset {
-				isCrossTx = true
-			}
-			if voteTxHolder[txid] == types.Vote {
-				tx.TxType = types.Vote
-			}
-			spend := make(map[common2.Uint168]int64)
-			var totalInput int64 = 0
-			var from []common2.Uint168
-			var to []common2.Uint168
-			for _, input := range tx.Inputs {
-				txid := input.Previous.TxID
-				index := input.Previous.Index
-				referTx, _, err := c.GetTransaction(txid)
-				if err != nil {
-					return err
-				}
-				address := referTx.Outputs[index].ProgramHash
-				totalInput += int64(referTx.Outputs[index].Value)
-				v, ok := spend[address]
-				if ok {
-					spend[address] = v + int64(referTx.Outputs[index].Value)
-				} else {
-					spend[address] = int64(referTx.Outputs[index].Value)
-				}
-				if !common.ContainsU168(address, from) {
-					from = append(from, address)
-				}
-			}
-			receive := make(map[common2.Uint168]int64)
-			var totalOutput int64 = 0
-			vote := outputpayload.VoteOutput{}
-			for _, output := range tx.Outputs {
-				outputPayload := output.Payload
-				if tx.TxType != types.Vote && outputPayload != nil && outputPayload.Validate() == nil {
-					var buf bytes.Buffer
-					err := outputPayload.Deserialize(&buf)
-					if err == nil || err == io.EOF {
-						err = vote.Serialize(&buf)
-						if err == nil || err == io.EOF {
-							tx.TxType = types.Vote
-						}
-					}
+					txhs = append(txhs, txh)
 				}
 
-				address, _ := output.ProgramHash.ToAddress()
-				var valueCross int64
-				if isCrossTx == true && (output.ProgramHash == MINING_ADDR || strings.Index(address, "X") == 0 || address == "4oLvT2") {
-					switch pl := tx.Payload.(type) {
-					case *payload.TransferCrossChainAsset:
-						valueCross = int64(pl.CrossChainAmounts[0])
-					}
+				for k, r := range spend {
+					txh := types.TransactionHistory{}
+					txh.Value = uint64(r)
+					txh.Address = k
+					txh.Inputs = []common2.Uint168{k}
+					txh.TxType = tx.TxType
+					txh.Txid = tx.Hash()
+					txh.Height = uint64(block.Height)
+					txh.CreateTime = uint64(block.Header.Timestamp)
+					txh.Type = []byte(SPEND)
+					txh.Fee = uint64(fee)
+					txh.Outputs = to
+					txh.Memo = memo
+					txhs = append(txhs, txh)
 				}
-				if valueCross != 0 {
-					totalOutput += valueCross
-				} else {
-					totalOutput += int64(output.Value)
-				}
-				v, ok := receive[output.ProgramHash]
-				if ok {
-					receive[output.ProgramHash] = v + int64(output.Value)
-				} else {
-					receive[output.ProgramHash] = int64(output.Value)
-				}
-				if !common.ContainsU168(output.ProgramHash, to) {
-					to = append(to, output.ProgramHash)
-				}
-			}
-			fee := totalInput - totalOutput
-			for k, r := range receive {
-				transferType := INCOME
-				s, ok := spend[k]
-				var value int64
-				if ok {
-					if s > r {
-						value = s - r
-						transferType = SPEND
-					} else {
-						value = r - s
-					}
-					delete(spend, k)
-				} else {
-					value = r
-				}
-				var realFee uint64 = uint64(fee)
-				if transferType == INCOME {
-					realFee = 0
-					to = []common2.Uint168{k}
-				}
-
-				if transferType == SPEND {
-					from = []common2.Uint168{k}
-				}
-
-				txh := types.TransactionHistory{}
-				txh.Value = uint64(value)
-				txh.Address = k
-				txh.Inputs = from
-				txh.TxType = tx.TxType
-				txh.Txid = tx.Hash()
-				txh.Height = uint64(block.Height)
-				txh.CreateTime = uint64(block.Header.Timestamp)
-				txh.Type = []byte(transferType)
-				txh.Fee = realFee
-				txh.Outputs = to
-				txh.Memo = memo
-				txhs = append(txhs, txh)
-			}
-
-			for k, r := range spend {
-				txh := types.TransactionHistory{}
-				txh.Value = uint64(r)
-				txh.Address = k
-				txh.Inputs = []common2.Uint168{k}
-				txh.TxType = tx.TxType
-				txh.Txid = tx.Hash()
-				txh.Height = uint64(block.Height)
-				txh.CreateTime = uint64(block.Header.Timestamp)
-				txh.Type = []byte(SPEND)
-				txh.Fee = uint64(fee)
-				txh.Outputs = to
-				txh.Memo = memo
-				txhs = append(txhs, txh)
 			}
 		}
+		c.persistTransactionHistory(txhs)
+		c.persistPbks(pubks)
+		c.persistDposReward(dposReward, block.Height)
+		c.persistBestHeight(block.Height)
+		c.persistStoredHeight(block.Height)
 	}
-	c.persistTransactionHistory(txhs)
-	c.persistPbks(pubks)
-	c.persistDposReward(dposReward, block.Height)
 	return nil
 }
 
-func (c ChainStoreExtend) CloseEx() {
+func (c *ChainStoreExtend) CloseEx() {
 	closed := make(chan bool)
 	c.quitEx <- closed
 	<-closed
@@ -386,7 +421,7 @@ func (c ChainStoreExtend) CloseEx() {
 	log.Info("Extend chainStore shutting down")
 }
 
-func (c ChainStoreExtend) loop() {
+func (c *ChainStoreExtend) loop() {
 	for {
 		select {
 		case t := <-c.taskChEx:
@@ -407,7 +442,7 @@ func (c ChainStoreExtend) loop() {
 	}
 }
 
-func (c ChainStoreExtend) GetTxHistory(addr string, order string) interface{} {
+func (c *ChainStoreExtend) GetTxHistory(addr string, order string) interface{} {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataTxHistoryPrefix))
 	var txhs interface{}
@@ -454,7 +489,7 @@ func (c ChainStoreExtend) GetTxHistory(addr string, order string) interface{} {
 	return txhs
 }
 
-func (c ChainStoreExtend) GetTxHistoryByPage(addr, order string, pageNum, pageSize uint32) (interface{}, int) {
+func (c *ChainStoreExtend) GetTxHistoryByPage(addr, order string, pageNum, pageSize uint32) (interface{}, int) {
 	txhs := c.GetTxHistory(addr, order)
 	from := (pageNum - 1) * pageSize
 	if order == "desc" {
@@ -464,7 +499,7 @@ func (c ChainStoreExtend) GetTxHistoryByPage(addr, order string, pageNum, pageSi
 	}
 }
 
-func (c ChainStoreExtend) GetCmcPrice() types.Cmcs {
+func (c *ChainStoreExtend) GetCmcPrice() types.Cmcs {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataCmcPrefix))
 	common2.WriteVarString(key, "CMC")
@@ -480,7 +515,7 @@ func (c ChainStoreExtend) GetCmcPrice() types.Cmcs {
 	return cmcs
 }
 
-func (c ChainStoreExtend) GetPublicKey(addr string) string {
+func (c *ChainStoreExtend) GetPublicKey(addr string) string {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataPkPrefix))
 	k, _ := common2.Uint168FromAddress(addr)
@@ -493,7 +528,7 @@ func (c ChainStoreExtend) GetPublicKey(addr string) string {
 	return hex.EncodeToString(buf[1:])
 }
 
-func (c ChainStoreExtend) GetDposReward(addr string) (*common2.Fixed64, error) {
+func (c *ChainStoreExtend) GetDposReward(addr string) (*common2.Fixed64, error) {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataDposRewardPrefix))
 	k, _ := common2.Uint168FromAddress(addr)
@@ -510,7 +545,7 @@ func (c ChainStoreExtend) GetDposReward(addr string) (*common2.Fixed64, error) {
 	return &r, nil
 }
 
-func (c ChainStoreExtend) GetDposRewardByHeight(addr string, height uint32) (*common2.Fixed64, error) {
+func (c *ChainStoreExtend) GetDposRewardByHeight(addr string, height uint32) (*common2.Fixed64, error) {
 	key := new(bytes.Buffer)
 	key.WriteByte(byte(DataDposRewardPrefix))
 	k, _ := common2.Uint168FromAddress(addr)
@@ -521,4 +556,26 @@ func (c ChainStoreExtend) GetDposRewardByHeight(addr string, height uint32) (*co
 		return nil, err
 	}
 	return common2.Fixed64FromBytes(buf)
+}
+
+func (c *ChainStoreExtend) GetBestHeightExt() (uint32, error) {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataBestHeightPrefix))
+	data, err := c.Get(key.Bytes())
+	if err != nil {
+		return 0, err
+	}
+	buf := bytes.NewBuffer(data)
+	return binary.LittleEndian.Uint32(buf.Bytes()), nil
+}
+
+func (c *ChainStoreExtend) GetStoredHeightExt(height uint32) (bool, error) {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataStoredHeightPrefix))
+	common2.WriteUint32(key, height)
+	_, err := c.Get(key.Bytes())
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
