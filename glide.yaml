@@ -29,3 +29,6 @@ import:
 - package: github.com/robfig/cron.git
 - package: gopkg.in/cheggaaa/pb.v1
 - package: github.com/robfig/cron
+- package: github.com/mattn/go-sqlite3
+ignore:
+- github.com/russross/blackfriday/v2
