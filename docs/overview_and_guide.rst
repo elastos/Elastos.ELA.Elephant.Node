@@ -97,6 +97,7 @@ If you did not see any error message, congratulations, you have made the Elephan
 
 Run the node::
 
+    $ make
     $ ./elephant
 
 Nginx config Example::
