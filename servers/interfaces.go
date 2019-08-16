@@ -1974,7 +1974,7 @@ func VoterStatistic(param Params) map[string]interface{} {
 		}
 		from = (num - 1) * size
 	}
-	sql = "select * from chain_vote_info where address = '" + addr + "' order by id desc "
+	sql = "select * from chain_vote_info where address = '" + addr + "' order by _id desc "
 	info, err := blockchain2.DBA.ToStruct(sql, types.Vote_info{})
 	if err != nil {
 		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, " internal error : "+err.Error())
