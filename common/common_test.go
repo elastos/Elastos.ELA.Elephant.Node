@@ -2,11 +2,26 @@ package common
 
 import (
 	"encoding/hex"
-	"sync/atomic"
+	"fmt"
 	"testing"
 )
 
+type st struct {
+	a int
+}
+
+func test(s *[]*st) {
+	*s = append(*s, &st{1}, &st{2})
+}
+
 func Test_getAddress(t *testing.T) {
+
+	var blocks []*st
+
+	test(&blocks)
+
+	fmt.Printf("%v", blocks)
+
 	b, _ := hex.DecodeString("02776f2ad3fc822caa976bf0a83eb33cf4047518c9b6d411603be4a864b24acb4b")
 	s, _ := GetProgramHash(b)
 	addr, _ := s.ToAddress()
@@ -23,21 +38,21 @@ func Test_getAddress(t *testing.T) {
 	defer println(1)
 	defer println(2)
 
-	c1 := make(chan int32, 1000)
+	//c1 := make(chan int32, 1000)
 
-	var i int32 = 0
-	go func() {
-		for i = 0; i < 2000; {
-			go func() {
-				c1 <- atomic.AddInt32(&i, 1)
-			}()
-		}
-	}()
-
-	for {
-		select {
-		case d := <-c1:
-			println(d)
-		}
-	}
+	//var i int32 = 0
+	//go func() {
+	//	for i = 0; i < 2000; {
+	//		go func() {
+	//			c1 <- atomic.AddInt32(&i, 1)
+	//		}()
+	//	}
+	//}()
+	//
+	//for {
+	//	select {
+	//	case d := <-c1:
+	//		println(d)
+	//	}
+	//}
 }

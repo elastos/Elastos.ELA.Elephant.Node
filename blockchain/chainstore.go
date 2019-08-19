@@ -192,20 +192,7 @@ func doProcessVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) er
 	return nil
 }
 
-func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
-	var blocks []*Block
-	var rollbackStart uint32 = 0
-	if c.checkPoint {
-		bestHeight, err := c.GetBestHeightExt()
-		if err == nil && bestHeight > CHECK_POINT_ROLLBACK_HEIGHT {
-			rollbackStart = bestHeight - CHECK_POINT_ROLLBACK_HEIGHT
-		}
-		c.checkPoint = false
-		log.Infof("Checkpoint at height : %d", rollbackStart)
-	} else if blk.Height > DPOS_CHECK_POINT {
-		rollbackStart = blk.Height - 5
-	}
-
+func (c *ChainStoreExtend) assembleRollbackBlock(rollbackStart uint32, blk *Block, blocks *[]*Block) error {
 	for i := rollbackStart; i < blk.Height; i++ {
 		blockHash, err := c.GetBlockHash(i)
 		if err != nil {
@@ -215,7 +202,25 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 		if err != nil {
 			return err
 		}
-		blocks = append(blocks, b)
+		*blocks = append(*blocks, b)
+	}
+	return nil
+}
+
+func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
+	var blocks []*Block
+	var rollbackStart uint32 = 0
+	if c.checkPoint {
+		bestHeight, err := c.GetBestHeightExt()
+		if err == nil && bestHeight > CHECK_POINT_ROLLBACK_HEIGHT {
+			rollbackStart = bestHeight - CHECK_POINT_ROLLBACK_HEIGHT
+		}
+		c.assembleRollbackBlock(rollbackStart, blk, &blocks)
+		c.checkPoint = false
+		log.Infof("Checkpoint at height : %d", rollbackStart)
+	} else if blk.Height > DPOS_CHECK_POINT {
+		rollbackStart = blk.Height - 5
+		c.assembleRollbackBlock(rollbackStart, blk, blocks)
 	}
 
 	blocks = append(blocks, blk)
