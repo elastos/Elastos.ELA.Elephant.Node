@@ -220,7 +220,7 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 		log.Infof("Checkpoint at height : %d", rollbackStart)
 	} else if blk.Height > DPOS_CHECK_POINT {
 		rollbackStart = blk.Height - 5
-		c.assembleRollbackBlock(rollbackStart, blk, blocks)
+		c.assembleRollbackBlock(rollbackStart, blk, &blocks)
 	}
 
 	blocks = append(blocks, blk)
