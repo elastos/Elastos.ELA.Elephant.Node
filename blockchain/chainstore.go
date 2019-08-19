@@ -180,7 +180,8 @@ func doProcessVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) er
 			if err != nil {
 				return err
 			}
-			if !r.Next() {
+			if r.Next() {
+				log.Infof("Comming , Txid %v , n %v ", txhash, vout)
 				_, err = stmt.Exec(block.Header.Height, txhash, vout)
 				if err != nil {
 					return err
