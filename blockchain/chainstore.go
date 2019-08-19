@@ -194,26 +194,30 @@ func doProcessVote(block *Block, voteTxHolder *map[string]TxType, db *sql.Tx) er
 
 func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 	var blocks []*Block
+	var rollbackStart uint32 = 0
 	if c.checkPoint {
-		var rollbackStart uint32 = 0
 		bestHeight, err := c.GetBestHeightExt()
 		if err == nil && bestHeight > CHECK_POINT_ROLLBACK_HEIGHT {
 			rollbackStart = bestHeight - CHECK_POINT_ROLLBACK_HEIGHT
 		}
-		for i := rollbackStart; i < blk.Height; i++ {
-			blockHash, err := c.GetBlockHash(i)
-			if err != nil {
-				return err
-			}
-			b, err := c.GetBlock(blockHash)
-			if err != nil {
-				return err
-			}
-			blocks = append(blocks, b)
-		}
 		c.checkPoint = false
 		log.Infof("Checkpoint at height : %d", rollbackStart)
+	} else if blk.Height > DPOS_CHECK_POINT {
+		rollbackStart = blk.Height - 5
 	}
+
+	for i := rollbackStart; i < blk.Height; i++ {
+		blockHash, err := c.GetBlockHash(i)
+		if err != nil {
+			return err
+		}
+		b, err := c.GetBlock(blockHash)
+		if err != nil {
+			return err
+		}
+		blocks = append(blocks, b)
+	}
+
 	blocks = append(blocks, blk)
 
 	for _, block := range blocks {
