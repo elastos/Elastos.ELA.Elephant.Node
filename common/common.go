@@ -12,3 +12,11 @@ func GetProgramHash(public []byte) (*common.Uint168, error) {
 	}
 	return hash, nil
 }
+
+func GetAddress(public []byte) (string, error) {
+	hash, err := GetProgramHash(public)
+	if err != nil {
+		return "", err
+	}
+	return hash.ToAddress()
+}

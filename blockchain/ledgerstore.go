@@ -3,6 +3,7 @@ package blockchain
 import (
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
 	. "github.com/elastos/Elastos.ELA/blockchain"
+	"github.com/elastos/Elastos.ELA/common"
 	. "github.com/elastos/Elastos.ELA/core/types"
 )
 
@@ -17,4 +18,6 @@ type IChainStoreExtend interface {
 	GetTxHistoryByPage(addr, order string, pageNum, pageSize uint32) (interface{}, int)
 	GetCmcPrice() types.Cmcs
 	GetPublicKey(addr string) string
+	GetDposReward(addr string) (*common.Fixed64, error)
+	GetDposRewardByHeight(addr string, height uint32) (*common.Fixed64, error)
 }

@@ -9,9 +9,9 @@ import (
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
 	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/log"
+	"github.com/elastos/Elastos.ELA/dpos/state"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 )
 
@@ -38,7 +38,7 @@ func (c ChainStoreExtend) persistTransactionHistory(txhs []types.TransactionHist
 		if err != nil {
 			c.rollback()
 			log.Fatal("Error persist transaction history")
-			os.Exit(-1)
+			return err
 		}
 	}
 	c.commit()
@@ -53,11 +53,86 @@ func (c ChainStoreExtend) persistPbks(pbks map[common.Uint168][]byte) error {
 		err := c.doPersistPbks(k, v)
 		if err != nil {
 			c.rollback()
-			log.Fatal("Error persist transaction history")
-			os.Exit(-1)
+			log.Fatal("Error persist public keys")
+			return err
 		}
 	}
 	c.commit()
+	return nil
+}
+
+func (c ChainStoreExtend) persistDposReward(rewardDpos map[common.Uint168]common.Fixed64, height uint32) error {
+	c.begin()
+	for k, v := range rewardDpos {
+		err := c.doPersistDposReward(k, v, height)
+		if err != nil {
+			c.rollback()
+			log.Fatal("Error persist dpos reward")
+			return err
+		}
+	}
+	c.commit()
+	return nil
+}
+
+func (c ChainStoreExtend) persistBestHeight(height uint32) error {
+	bestHeight, err := c.GetBestHeightExt()
+	if (err == nil && bestHeight < height) || err != nil {
+		c.begin()
+		err = c.doPersistBestHeight(height)
+		if err != nil {
+			c.rollback()
+			log.Fatal("Error persist best height")
+			return err
+		}
+		c.commit()
+	}
+	return nil
+}
+
+func (c ChainStoreExtend) persistStoredHeight(height uint32) error {
+	c.begin()
+	err := c.doPersistStoredHeight(height)
+	if err != nil {
+		c.rollback()
+		log.Fatal("Error persist best height")
+		return err
+	}
+	c.commit()
+	return nil
+}
+
+func (c ChainStoreExtend) doPersistStoredHeight(h uint32) error {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataStoredHeightPrefix))
+	common.WriteUint32(key, h)
+	value := new(bytes.Buffer)
+	common.WriteVarBytes(value, []byte{1})
+	c.BatchPut(key.Bytes(), value.Bytes())
+	return nil
+}
+
+func (c ChainStoreExtend) doPersistBestHeight(h uint32) error {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataBestHeightPrefix))
+	value := new(bytes.Buffer)
+	common.WriteUint32(value, h)
+	c.BatchPut(key.Bytes(), value.Bytes())
+	return nil
+}
+
+func (c ChainStoreExtend) doPersistDposReward(k common.Uint168, v common.Fixed64, h uint32) error {
+	key := new(bytes.Buffer)
+	key.WriteByte(byte(DataDposRewardPrefix))
+	err := k.Serialize(key)
+	if err != nil {
+		return err
+	}
+	common.WriteUint32(key, h)
+
+	value := new(bytes.Buffer)
+	v.Serialize(value)
+	c.BatchPut(key.Bytes(), value.Bytes())
 	return nil
 }
 
@@ -96,9 +171,66 @@ func (c ChainStoreExtend) doPersistTransactionHistory(i uint64, history types.Tr
 	return nil
 }
 
-func (c ChainStoreExtend) initCmc() {
+func (c ChainStoreExtend) initTask() {
 	c.AddFunc("@every "+common2.Conf.Cmc.Inteval, c.renewCmcPrice)
+	c.AddFunc("@every 2m", func() {
+		if len(c.rp) == 0 {
+			c.rp <- true
+		}
+	})
 	c.Start()
+}
+
+func (c *ChainStoreExtend) renewProducer() {
+	if DefaultChainStoreEx.GetHeight() >= 290000 {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		var err error
+		db, err := DBA.Begin()
+		defer func() {
+			if err != nil {
+				log.Errorf("Error renew producer %s", err.Error())
+				db.Rollback()
+			} else {
+				log.Info("commit renew producer")
+				db.Commit()
+			}
+		}()
+		if err != nil {
+			return
+		}
+		stmt1, err := db.Prepare("delete from chain_producer_info")
+		if err != nil {
+			return
+		}
+		_, err = stmt1.Exec()
+		if err != nil {
+			return
+		}
+		stmt1.Close()
+
+		stmt, err := db.Prepare("insert into chain_producer_info (Ownerpublickey,Nodepublickey,Nickname,Url,Location,Active,Votes,Netaddress,State,Registerheight,Cancelheight,Inactiveheight,Illegalheight,`Index`) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+		if err != nil {
+			return
+		}
+		producers := c.chain.GetState().GetAllProducers()
+		for i, producer := range producers {
+			var active int
+			if producer.State() == state.Active {
+				active = 1
+			} else {
+				active = 0
+			}
+			_, err = stmt.Exec(common.BytesToHexString(producer.OwnerPublicKey()), common.BytesToHexString(producer.NodePublicKey()),
+				producer.Info().NickName, producer.Info().Url, producer.Info().Location, active, producer.Votes().String(),
+				producer.Info().NetAddress, producer.State().String(), producer.RegisterHeight(), producer.CancelHeight(),
+				producer.InactiveSince(), producer.IllegalHeight(), i)
+			if err != nil {
+				return
+			}
+		}
+		stmt.Close()
+	}
 }
 
 func (c *ChainStoreExtend) renewCmcPrice() {
