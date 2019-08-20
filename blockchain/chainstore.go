@@ -217,7 +217,6 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 		}
 		c.assembleRollbackBlock(rollbackStart, blk, &blocks)
 		c.checkPoint = false
-		log.Infof("Checkpoint at height : %d", rollbackStart)
 	} else if blk.Height > DPOS_CHECK_POINT {
 		rollbackStart = blk.Height - 5
 		c.assembleRollbackBlock(rollbackStart, blk, &blocks)
@@ -229,9 +228,6 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 		_, err := c.GetStoredHeightExt(block.Height)
 		if err == nil {
 			continue
-		}
-		if block.Height%100 == 0 {
-			log.Infof("History height : %d ", block.Height)
 		}
 		//process vote
 		voteTxHolder := make(map[string]TxType)

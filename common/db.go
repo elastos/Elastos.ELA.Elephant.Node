@@ -154,7 +154,6 @@ func InitDb(db *Dba) error {
 	}
 	if !r.Next() {
 		for _, v := range createTableSqlStmtArr {
-			log.Infof("Execute sql :%s", v)
 			_, err := db.Exec(v)
 			if err != nil {
 				log.Infof("Error execute sql : %s \n", err.Error())

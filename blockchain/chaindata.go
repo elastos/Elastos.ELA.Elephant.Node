@@ -192,7 +192,6 @@ func (c *ChainStoreExtend) renewProducer() {
 				log.Errorf("Error renew producer %s", err.Error())
 				db.Rollback()
 			} else {
-				log.Info("commit renew producer")
 				db.Commit()
 			}
 		}()
