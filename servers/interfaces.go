@@ -2010,8 +2010,6 @@ func VoterStatistic(param Params) map[string]interface{} {
 		voteStatisticSorter = voteStatisticSorter[from : from+size]
 	} else if !(from == 0 && size == 0) && int(from+1) <= len(voteStatisticSorter) && int(from+1+size) > len(voteStatisticSorter) {
 		voteStatisticSorter = voteStatisticSorter[from:]
-	} else {
-		voteStatisticSorter = types.Vote_statisticSorter{}
 	}
 	var voteStatistic types.Vote_statisticSorter
 	ranklisthoder := make(map[int64][]interface{})
@@ -2046,10 +2044,10 @@ order by value * 100000000  desc) m`, types.Vote_info{})
 				vi.Rank = int64(i + 1)
 				val, err := blockchain2.DefaultChainStoreEx.GetDposRewardByHeight(addr, uint32(v.Height))
 				if err != nil {
-					log.Warn("Invalid Ownerpublickey " + vi.Ownerpublickey)
-					continue
+					vi.Reward = "0"
+				} else {
+					vi.Reward = val.String()
 				}
-				vi.Reward = val.String()
 				var vote float64
 				if vi.Value == "" {
 					vote = 0
