@@ -30,3 +30,4 @@ Contents
    :maxdepth: 2
    
    overview_and_guide.rst
+   enhancement_api.rst
