@@ -3,6 +3,7 @@ BUILD = go build -ldflags "-X main.Version=$(VERSION) -X 'main.GoVersion=`go ver
 
 all:
 	$(BUILD) -o elephant
+	$(BUILD) -o ela-cli cmd/ela-cli.go
 
 format:
 	go fmt ./...
