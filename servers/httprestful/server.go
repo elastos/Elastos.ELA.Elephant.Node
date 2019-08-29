@@ -50,6 +50,7 @@ const (
 	ApiTotalVoteByHeight    = "/api/1/dpos/vote/height/:height"
 	ApiGetProducerByTxs     = "/api/1/dpos/transaction/producer"
 	ApiNodeRewardAddr       = "/api/1/node/reward/address"
+	ApiGetSpendUtxos        = "/api/1/spend/utxos"
 )
 
 var ext_api_handle = map[string]bool{
@@ -68,6 +69,7 @@ var ext_api_handle = map[string]bool{
 	ApiTotalVoteByHeight:    true,
 	ApiGetProducerByTxs:     true,
 	ApiNodeRewardAddr:       true,
+	ApiGetSpendUtxos:        true,
 }
 
 type Action struct {
@@ -168,6 +170,7 @@ func (rt *restServer) initializeMethod() {
 		ApiSendRawTx:        {name: "sendRawTx", handler: servers.SendRawTx},
 		ApiCreateVoteTx:     {name: "createVoteTx", handler: servers.CreateVoteTx},
 		ApiGetProducerByTxs: {name: "getProducerByTxs", handler: servers.GetProducerByTxs},
+		ApiGetSpendUtxos:    {name: "getSpendUtxos", handler: servers.GetSpendUtxos},
 	}
 	rt.postMap = postMethodMap
 	rt.getMap = getMethodMap
@@ -287,6 +290,7 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 		getQueryParam(r, req)
 	case ApiGetProducerByTxs:
 	case ApiNodeRewardAddr:
+	case ApiGetSpendUtxos:
 
 	}
 	return req

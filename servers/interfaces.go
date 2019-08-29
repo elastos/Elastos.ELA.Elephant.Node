@@ -2216,6 +2216,42 @@ func GetProducerByTxs(param Params) map[string]interface{} {
 	return ResponsePackEx(ELEPHANT_SUCCESS, rst)
 }
 
+func GetSpendUtxos(param Params) map[string]interface{} {
+	inputs, ok := param["UTXOInputs"].([]interface{})
+	if !ok {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find UTXOInputs")
+	}
+	var total common.Fixed64
+	for _, input := range inputs {
+		i, ok := input.(map[string]interface{})
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid request param")
+		}
+		index, ok := i["index"].(float64)
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid request param")
+		}
+		txid, ok := i["txid"].(string)
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid request param")
+		}
+		reverseTxid, err := common2.ReverseHexString(txid)
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid request param")
+		}
+		nativeTxid, err := common.Uint256FromHexString(reverseTxid)
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid request param")
+		}
+		utxo, err := Store.GetUnspent(*nativeTxid, uint16(index))
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid utxo , txid "+txid+", index "+strconv.Itoa(int(index)))
+		}
+		total += utxo.Value
+	}
+	return ResponsePackEx(ELEPHANT_SUCCESS, total)
+}
+
 func NodeRewardAddr(param Params) map[string]interface{} {
 	return ResponsePackEx(ELEPHANT_SUCCESS, config.Parameters.PowConfiguration.PayToAddr)
 }
