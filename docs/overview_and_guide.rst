@@ -110,6 +110,12 @@ Nginx config Example::
         # pass requests for dynamic content to rails/turbogears/zope, et al
 
         location ~ ^/api/1/balance {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -120,6 +126,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/cmc {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -130,6 +142,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/createTx {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -140,6 +158,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/createVoteTx {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -150,6 +174,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/history {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -160,6 +190,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/sendRawTx {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -170,6 +206,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/pubkey {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -180,6 +222,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/currHeight {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -190,6 +238,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/dpos {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -200,6 +254,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/fee {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -210,6 +270,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/node/reward/address {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
@@ -220,6 +286,12 @@ Nginx config Example::
         }
 
         location ~ ^/api/1/spend/utxos {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
             proxy_pass http://localhost:20334;
             proxy_connect_timeout 120s;
             proxy_read_timeout 120s;
