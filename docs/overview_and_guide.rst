@@ -199,6 +199,26 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
+        location ~ ^/api/1/fee {
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/1/node/reward/address {
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
         listen 443 ssl; # managed by Certbot
         ssl_certificate /etc/letsencrypt/live/exmaple.com/fullchain.pem; # managed by Certbot
         ssl_certificate_key /etc/letsencrypt/live/exmaple.com/privkey.pem; # managed by Certbot
