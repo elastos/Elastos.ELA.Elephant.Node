@@ -49,6 +49,7 @@ const (
 	ApiProducerRankByHeight = "/api/1/dpos/rank/height/:height"
 	ApiTotalVoteByHeight    = "/api/1/dpos/vote/height/:height"
 	ApiGetProducerByTxs     = "/api/1/dpos/transaction/producer"
+	ApiNodeRewardAddr       = "/api/1/node/reward/address"
 )
 
 var ext_api_handle = map[string]bool{
@@ -66,6 +67,7 @@ var ext_api_handle = map[string]bool{
 	ApiProducerRankByHeight: true,
 	ApiTotalVoteByHeight:    true,
 	ApiGetProducerByTxs:     true,
+	ApiNodeRewardAddr:       true,
 }
 
 type Action struct {
@@ -156,6 +158,7 @@ func (rt *restServer) initializeMethod() {
 		ApiVoterStatistic:       {name: "voterStatistic", handler: servers.VoterStatistic},
 		ApiProducerRankByHeight: {name: "producerRankByHeight", handler: servers.ProducerRankByHeight},
 		ApiTotalVoteByHeight:    {name: "totalVoteByHeight", handler: servers.TotalVoteByHeight},
+		ApiNodeRewardAddr:       {name: "nodeRewardAddr", handler: servers.NodeRewardAddr},
 	}
 	postMethodMap := map[string]Action{
 		ApiSendRawTransaction: {name: "sendrawtransaction", handler: servers.SendRawTransaction},
@@ -283,6 +286,8 @@ func (rt *restServer) getParams(r *http.Request, url string, req map[string]inte
 		req["height"] = getParam(r, "height")
 		getQueryParam(r, req)
 	case ApiGetProducerByTxs:
+	case ApiNodeRewardAddr:
+
 	}
 	return req
 }

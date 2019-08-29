@@ -1747,10 +1747,17 @@ func CreateTx(param Params) map[string]interface{} {
 	utxoOutputsDetail["amount"] = leftMoney
 	utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 
+	if config.Parameters.PowConfiguration.MinTxFee > 100 {
+		utxoOutputsDetail := make(map[string]interface{})
+		utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
+		utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
+		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+	}
+
 	paraListMap["Transactions"] = txList
 	txListMap["UTXOInputs"] = utxoInputsArray
 	txListMap["Outputs"] = utxoOutputsArray
-	txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
+	txListMap["Fee"] = 100
 	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
 }
 
@@ -1851,6 +1858,14 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 	}
 	utxoOutputsArray := make([]map[string]interface{}, 0)
+
+	if config.Parameters.PowConfiguration.MinTxFee > 100 {
+		utxoOutputsDetail := make(map[string]interface{})
+		utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
+		utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
+		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+	}
+
 	for _, v := range outputs {
 		output := v.(map[string]interface{})
 		utxoOutputsDetail := make(map[string]interface{})
@@ -1871,6 +1886,7 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		}
 		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 	}
+
 	leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee) - smAmt
 	if leftMoney > 0 {
 		utxoOutputsDetail := make(map[string]interface{})
@@ -1882,7 +1898,7 @@ func CreateVoteTx(param Params) map[string]interface{} {
 	paraListMap["Transactions"] = txList
 	txListMap["UTXOInputs"] = utxoInputsArray
 	txListMap["Outputs"] = utxoOutputsArray
-	txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
+	txListMap["Fee"] = 100
 	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
 }
 
@@ -2198,4 +2214,8 @@ func GetProducerByTxs(param Params) map[string]interface{} {
 		}
 	}
 	return ResponsePackEx(ELEPHANT_SUCCESS, rst)
+}
+
+func NodeRewardAddr(param Params) map[string]interface{} {
+	return ResponsePackEx(ELEPHANT_SUCCESS, config.Parameters.PowConfiguration.PayToAddr)
 }

@@ -1,7 +1,7 @@
 package: github.com/elastos/Elastos.ELA.Elaphant.Node
 import:
 - package: github.com/elastos/Elastos.ELA
-  version: c853031001c18534fec33cf73941335828dd1665
+  version: 2c62d9229851dc89bf9d37f254de886d1c086415
 - package: golang.org/x/crypto
   repo: https://github.com/golang/crypto.git
   vcs: git

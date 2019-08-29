@@ -14,7 +14,7 @@
     "PowConfiguration": {
       "PayToAddr": "EeEkSiRMZqg5rd9a2yPaWnvdPcikFtsrjE",
       "MinerInfo": "ELA",
-      "MinTxFee": 100
+      "MinTxFee": 4800
     },
     "RpcConfiguration": {
       "User": "clark",
