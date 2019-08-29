@@ -1699,7 +1699,7 @@ node reward address
             "status":200
         }
 
-Get producers of specific transactions
+summary of all spend utxo value
 -----------------------------------------
 
 .. http:post:: /api/1/spend/utxos
