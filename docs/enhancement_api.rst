@@ -331,10 +331,10 @@ voter's statistics
 
 
    :statuscode 200:   no error
-         :statuscode 400:   bad request
-         :statuscode 404:   not found request
-         :statuscode 500:   internal error
-         :statuscode 10001: process error
+   :statuscode 400:   bad request
+   :statuscode 404:   not found request
+   :statuscode 500:   internal error
+   :statuscode 10001: process error
 
 Get producers of specific transactions
 -----------------------------------------
@@ -1651,3 +1651,114 @@ Get coinmarketcap price
           ]
         }
 
+node fee
+------------------------------------------------
+
+.. http:get:: /api/1/fee
+
+   **Example request**:
+
+   .. sourcecode:: http
+
+      get /api/1/fee HTTP/1.1
+      Host: localhost
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+        {
+            "result":4860,
+            "status":200
+        }
+
+node reward address
+------------------------------------------------
+
+.. http:get:: /api/1/node/reward/address
+
+   **Example request**:
+
+   .. sourcecode:: http
+
+      get /api/1/node/reward/address HTTP/1.1
+      Host: localhost
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+        {
+            "result":"EZLPHvHDNvUe8uTjs9iAUoPY2R1FLpBNH2",
+            "status":200
+        }
+
+Get producers of specific transactions
+-----------------------------------------
+
+.. http:post:: /api/1/spend/utxos
+
+   **Example request**:
+
+   .. sourcecode:: http
+
+    POST /api/1/spend/utxos HTTP/1.1
+    Host: localhost
+
+      {
+          "UTXOInputs": [
+            {
+              "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+              "index": 45,
+              "txid": "4fa997c7d1211e5a4631d879f35b31d2fa4914891ec9ce4c27bf25d5d789b3fe"
+            },
+            {
+              "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+              "index": 46,
+              "txid": "a10456d680780d8700550cff99e36050f91f7f4c3747880503a99a6a88f12cf9"
+            },
+            {
+              "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+              "index": 59,
+              "txid": "79fa3a649a41895c67bff8c60a55d07388dff69c5a35612eedd7fa4a787315c8"
+            },
+            {
+              "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+              "index": 1,
+              "txid": "35ddfbc848c337b5ac8e20f6d584da565361b9b2aa79f601b0d0bbdfa37f72e1"
+            },
+            {
+              "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+              "index": 45,
+              "txid": "4915e1e5e8bff3b2d483c5ba3a5dafe1fa9d9692d2d97feffa9c4151a02dfb42"
+            },
+            {
+              "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+              "index": 1,
+              "txid": "7aa2017e158e45e13daeb203416faa0fa3aeef217fd3c00c3a5ee3fbbfea66bf"
+            },
+            {
+              "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+              "index": 2,
+              "txid": "7d1471d87334c6c50a4891eece57bfd99630b62774550535dbd1ceb2ea98cc89"
+            }
+          ]
+        }
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+            "result": 1066042996951,
+            "status": 200
+      }
