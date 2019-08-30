@@ -440,9 +440,9 @@ Get producers of specific transactions
 
 Get dpos super node rank list
 ------------------------------------------------
-rank list of producer
+rank list of producer , state can be active , inactive , pending , canceled , illegal , returned
 
-    .. http:get:: /api/1/dpos/rank/height/(int:`height`)
+    .. http:get:: /api/1/dpos/rank/height/(int:`height`)?state=active
 
        **Example request**:
 
