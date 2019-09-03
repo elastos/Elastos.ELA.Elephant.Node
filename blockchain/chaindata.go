@@ -310,6 +310,10 @@ func getPriceFromHbg() (string, error) {
 
 func (c ChainStoreExtend) saveToDb(cmcResponseUSD, cmcResponseCNY, cmcResponseBTC types.CmcResponse) error {
 	data := cmcResponseUSD.Data
+	if len(cmcResponseCNY.Data) != len(cmcResponseUSD.Data) || len(cmcResponseUSD.Data) != len(cmcResponseBTC.Data) {
+		log.Errorf("Invalid Key fetch Cmc Data m CNY :%v, BTC :%v, USD :%v", cmcResponseCNY, cmcResponseBTC, cmcResponseUSD)
+		return nil
+	}
 	cmcs := make([]types.Cmc, 0)
 	for i := 0; i < len(data); i++ {
 		var btcPrice string

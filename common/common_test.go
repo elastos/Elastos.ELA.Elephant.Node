@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/elastos/Elastos.ELA/crypto"
 	"testing"
 )
 
@@ -68,4 +69,16 @@ func Test_getAddressFromPriv(t *testing.T) {
 		t.Error(err)
 	}
 	println(addr, did)
+}
+
+func Test_signVerify(t *testing.T) {
+	priv := "ED77803C1C04AD646C3F0245B6D506EE6DF7A022187921F4D2ABCAF22012F72B"
+	privBytes, _ := hex.DecodeString(priv)
+	msg := "hello,world"
+	signature, _ := crypto.Sign(privBytes, []byte(msg))
+	pub, _ := GetPublicKeyFromPrivKey(priv)
+	err := crypto.Verify(*pub, []byte(msg), signature)
+	if err != nil {
+		println("Verify failed")
+	}
 }

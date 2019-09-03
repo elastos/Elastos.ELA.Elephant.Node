@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
@@ -112,20 +113,8 @@ func setupConfig(c *cli.Context) {
 }
 
 func startNode(c *cli.Context) {
-
-	// Enter PayToAddr private key
-	log.Info("\nPlease enter node reward address private key: ")
-	priv, err := gopass.GetPasswd()
-	if err != nil {
-		printErrorAndExit(err)
-	}
-	addr, err := common.GetAddressFromPrivKey(string(priv))
-	if err != nil {
-		printErrorAndExit(err)
-	}
-	if addr != cfg.PowConfiguration.PayToAddr {
-		printErrorAndExit(errors.New("Invalid private key , not matching configuration PowConfiguration.PayToAddr " + cfg.PowConfiguration.PayToAddr))
-	}
+	// Node Info
+	nodeInfo()
 
 	// Enable http profiling server if requested.
 	if cfg.ProfilePort != 0 {
@@ -149,7 +138,7 @@ func startNode(c *cli.Context) {
 
 	log.Infof("Node version: %s", Version)
 	log.Info(GoVersion)
-	did, err := common.GetDIDFromPrivKey(string(priv))
+	did, err := common.GetDIDFromPrivKey(hex.EncodeToString(servers.NodePrivKey))
 	log.Infof("Node DID: %s", did)
 
 	var interrupt = signal.NewInterrupt()
@@ -381,5 +370,34 @@ func printSyncState(db blockchain.IChainStore, server elanet.Server) {
 		}
 		buf.WriteString("]")
 		statlog.Info(buf.String())
+	}
+}
+
+func nodeInfo() {
+	// Enter PayToAddr private key
+	log.Info("\nPlease enter node reward address private key: ")
+	var err error
+	privKey, err := gopass.GetPasswd()
+	if err != nil {
+		printErrorAndExit(err)
+	}
+	servers.NodePrivKey, err = hex.DecodeString(string(privKey))
+	if err != nil {
+		printErrorAndExit(err)
+	}
+	pub, err := common.GetPublicKeyFromPrivKey(hex.EncodeToString(servers.NodePrivKey))
+	if err != nil {
+		printErrorAndExit(err)
+	}
+	servers.NodePubKey, err = pub.EncodePoint(true)
+	if err != nil {
+		printErrorAndExit(err)
+	}
+	addr, err := common.GetAddressFromPrivKey(hex.EncodeToString(servers.NodePrivKey))
+	if err != nil {
+		printErrorAndExit(err)
+	}
+	if addr != cfg.PowConfiguration.PayToAddr {
+		printErrorAndExit(errors.New("Invalid private key , not matching configuration PowConfiguration.PayToAddr " + cfg.PowConfiguration.PayToAddr))
 	}
 }

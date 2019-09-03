@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
 	common2 "github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
+	"github.com/elastos/Elastos.ELA/crypto"
 
 	"sort"
 	"strconv"
@@ -33,15 +35,17 @@ import (
 )
 
 var (
-	Compile   string
-	Config    *config.Configuration
-	Chain     *blockchain.BlockChain
-	Store     blockchain.IChainStore
-	TxMemPool *mempool.TxPool
-	Pow       *pow.Service
-	Server    elanet.Server
-	Arbiter   *dpos.Arbitrator
-	Arbiters  state.Arbitrators
+	Compile     string
+	NodePrivKey []byte
+	NodePubKey  []byte
+	Config      *config.Configuration
+	Chain       *blockchain.BlockChain
+	Store       blockchain.IChainStore
+	TxMemPool   *mempool.TxPool
+	Pow         *pow.Service
+	Server      elanet.Server
+	Arbiter     *dpos.Arbitrator
+	Arbiters    state.Arbitrators
 )
 
 func ToReversedString(hash common.Uint256) string {
@@ -1758,6 +1762,19 @@ func CreateTx(param Params) map[string]interface{} {
 	txListMap["UTXOInputs"] = utxoInputsArray
 	txListMap["Outputs"] = utxoOutputsArray
 	txListMap["Fee"] = 100
+	msg, err := json.Marshal(&paraListMap)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
+	}
+	signature, err := crypto.Sign(NodePrivKey, msg)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
+	}
+	proof := make(map[string]interface{})
+	txListMap["Proof"] = proof
+	proof["Signature"] = hex.EncodeToString(signature)
+	proof["Msg"] = hex.EncodeToString(msg)
+	proof["Pub"] = hex.EncodeToString(NodePubKey)
 	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
 }
 
@@ -1899,6 +1916,19 @@ func CreateVoteTx(param Params) map[string]interface{} {
 	txListMap["UTXOInputs"] = utxoInputsArray
 	txListMap["Outputs"] = utxoOutputsArray
 	txListMap["Fee"] = 100
+	msg, err := json.Marshal(&paraListMap)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
+	}
+	signature, err := crypto.Sign(NodePrivKey, msg)
+	if err != nil {
+		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
+	}
+	proof := make(map[string]interface{})
+	txListMap["Proof"] = proof
+	proof["Signature"] = hex.EncodeToString(signature)
+	proof["Msg"] = hex.EncodeToString(msg)
+	proof["Pub"] = hex.EncodeToString(NodePubKey)
 	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
 }
 
