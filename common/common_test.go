@@ -56,3 +56,16 @@ func Test_getAddress(t *testing.T) {
 	//	}
 	//}
 }
+
+func Test_getAddressFromPriv(t *testing.T) {
+	priv := "ED77803C1C04AD646C3F0245B6D506EE6DF7A022187921F4D2ABCAF22012F72B"
+	addr, err := GetAddressFromPrivKey(priv)
+	if err != nil {
+		t.Error(err)
+	}
+	did, err := GetDIDFromPrivKey(priv)
+	if err != nil {
+		t.Error(err)
+	}
+	println(addr, did)
+}

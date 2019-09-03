@@ -2,14 +2,17 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httpjsonrpc"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httpnodeinfo"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httprestful"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httpwebsocket"
 	"github.com/elastos/Elastos.ELA/utils"
+	"github.com/howeyc/gopass"
 	"github.com/urfave/cli"
 	"os"
 	"path/filepath"
@@ -110,6 +113,20 @@ func setupConfig(c *cli.Context) {
 
 func startNode(c *cli.Context) {
 
+	// Enter PayToAddr private key
+	log.Info("\nPlease enter node reward address private key: ")
+	priv, err := gopass.GetPasswd()
+	if err != nil {
+		printErrorAndExit(err)
+	}
+	addr, err := common.GetAddressFromPrivKey(string(priv))
+	if err != nil {
+		printErrorAndExit(err)
+	}
+	if addr != cfg.PowConfiguration.PayToAddr {
+		printErrorAndExit(errors.New("Invalid private key , not matching configuration PowConfiguration.PayToAddr " + cfg.PowConfiguration.PayToAddr))
+	}
+
 	// Enable http profiling server if requested.
 	if cfg.ProfilePort != 0 {
 		go utils.StartPProf(cfg.ProfilePort)
@@ -132,6 +149,8 @@ func startNode(c *cli.Context) {
 
 	log.Infof("Node version: %s", Version)
 	log.Info(GoVersion)
+	did, err := common.GetDIDFromPrivKey(string(priv))
+	log.Infof("Node DID: %s", did)
 
 	var interrupt = signal.NewInterrupt()
 
