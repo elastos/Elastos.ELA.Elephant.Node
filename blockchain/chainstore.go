@@ -378,9 +378,10 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 						value = r
 					}
 					var realFee uint64 = uint64(fee)
+					var rto []common2.Uint168
 					if transferType == INCOME {
 						realFee = 0
-						to = []common2.Uint168{k}
+						rto = []common2.Uint168{k}
 					}
 
 					if transferType == SPEND {
@@ -397,7 +398,7 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 					txh.CreateTime = uint64(block.Header.Timestamp)
 					txh.Type = []byte(transferType)
 					txh.Fee = realFee
-					txh.Outputs = to
+					txh.Outputs = rto
 					txh.Memo = memo
 					txhs = append(txhs, txh)
 				}
@@ -413,7 +414,11 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 					txh.CreateTime = uint64(block.Header.Timestamp)
 					txh.Type = []byte(SPEND)
 					txh.Fee = uint64(fee)
-					txh.Outputs = to
+					if len(to) > 3 {
+						txh.Outputs = to[0:3]
+					}else {
+						txh.Outputs = to
+					}
 					txh.Memo = memo
 					txhs = append(txhs, txh)
 				}

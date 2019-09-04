@@ -1875,14 +1875,6 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 	}
 	utxoOutputsArray := make([]map[string]interface{}, 0)
-
-	if config.Parameters.PowConfiguration.MinTxFee > 100 {
-		utxoOutputsDetail := make(map[string]interface{})
-		utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
-		utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
-		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
-	}
-
 	for _, v := range outputs {
 		output := v.(map[string]interface{})
 		utxoOutputsDetail := make(map[string]interface{})
@@ -1901,6 +1893,13 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		default:
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 		}
+		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+	}
+
+	if config.Parameters.PowConfiguration.MinTxFee > 100 {
+		utxoOutputsDetail := make(map[string]interface{})
+		utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
+		utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
 		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 	}
 
