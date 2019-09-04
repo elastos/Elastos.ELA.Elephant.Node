@@ -1881,7 +1881,15 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
 		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 	}
-	for _, v := range outputs {
+	for i, v := range outputs {
+		if i == 1 {
+			if config.Parameters.PowConfiguration.MinTxFee > 100 {
+				utxoOutputsDetail := make(map[string]interface{})
+				utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
+				utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
+				utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+			}
+		}
 		output := v.(map[string]interface{})
 		utxoOutputsDetail := make(map[string]interface{})
 		utxoOutputsDetail["address"] = output["addr"]
