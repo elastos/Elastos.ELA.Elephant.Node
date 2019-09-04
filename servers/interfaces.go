@@ -1926,9 +1926,9 @@ func CreateVoteTx(param Params) map[string]interface{} {
 	}
 	proof := make(map[string]interface{})
 	txListMap["Proof"] = proof
-	proof["Signature"] = hex.EncodeToString(signature)
-	proof["Msg"] = hex.EncodeToString(msg)
-	proof["Pub"] = hex.EncodeToString(NodePubKey)
+	proof["signature"] = hex.EncodeToString(signature)
+	proof["msg"] = hex.EncodeToString(msg)
+	proof["pub"] = hex.EncodeToString(NodePubKey)
 	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
 }
 
