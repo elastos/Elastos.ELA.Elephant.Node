@@ -15,13 +15,13 @@ Get dpos producer vote statistics
 ------------------------------------------------
 producer's vote statistics of specific height
 
-.. http:get:: /api/1/dpos/producer/(string:`producer_public_key`)/(int:`height`)
+.. http:get:: /api/v1/dpos/producer/(string:`producer_public_key`)/(int:`height`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/1/dpos/producer/03330ee8520088b7f578a9afabaef0c034fa31fe1354cb3a14410894f974132800/9999999 HTTP/1.1
+      GET /api/v1/dpos/producer/03330ee8520088b7f578a9afabaef0c034fa31fe1354cb3a14410894f974132800/9999999 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -124,13 +124,13 @@ Get dpos voter's statistics
 ------------------------------------------------
 voter's statistics
 
-.. http:get:: /api/1/dpos/address/(string:`address`)
+.. http:get:: /api/v1/dpos/address/(string:`address`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/1/dpos/address/ENaaqePNBtrZsNbs9uc35CPqTbvn8oaYL9 HTTP/1.1
+      GET /api/v1/dpos/address/ENaaqePNBtrZsNbs9uc35CPqTbvn8oaYL9 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -267,13 +267,13 @@ voter's statistics
         }
 
 
-.. http:get:: /api/1/dpos/address/(string:`address`)?pageSize=(int:`pageSize`)&pageNum=(int:`pageNum`)
+.. http:get:: /api/v1/dpos/address/(string:`address`)?pageSize=(int:`pageSize`)&pageNum=(int:`pageNum`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/1/dpos/address/ENaaqePNBtrZsNbs9uc35CPqTbvn8oaYL9?pageSize=1&pageNum=1 HTTP/1.1
+      GET /api/v1/dpos/address/ENaaqePNBtrZsNbs9uc35CPqTbvn8oaYL9?pageSize=1&pageNum=1 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -339,13 +339,13 @@ voter's statistics
 Get producers of specific transactions
 -----------------------------------------
 
-.. http:post:: /api/1/dpos/transaction/producer
+.. http:post:: /api/v1/dpos/transaction/producer
 
    **Example request**:
 
    .. sourcecode:: http
 
-    POST /api/1/dpos/transaction/producer HTTP/1.1
+    POST /api/v1/dpos/transaction/producer HTTP/1.1
     Host: localhost
 
       {
@@ -442,13 +442,13 @@ Get dpos super node rank list
 ------------------------------------------------
 rank list of producer , state can be active , inactive , pending , canceled , illegal , returned
 
-    .. http:get:: /api/1/dpos/rank/height/(int:`height`)?state=active
+    .. http:get:: /api/v1/dpos/rank/height/(int:`height`)?state=active
 
        **Example request**:
 
        .. sourcecode:: http
 
-          GET /api/1/dpos/rank/height/241762 HTTP/1.1
+          GET /api/v1/dpos/rank/height/241762 HTTP/1.1
           Host: localhost
 
        **Example response**:
@@ -886,13 +886,13 @@ Get dpos total vote of specific height
 ------------------------------------------------
 total vote of specific height
 
-.. http:get:: /api/1/dpos/vote/height/(int:`height`)
+.. http:get:: /api/v1/dpos/vote/height/(int:`height`)
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/1/dpos/vote/height/241762 HTTP/1.1
+      GET /api/v1/dpos/vote/height/241762 HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -1210,13 +1210,13 @@ Get transaction history
 
 get transaction history with your desired order
 
-.. http:get:: /api/1/history/(string:`addr`)?order=desc
+.. http:get:: /api/v1/history/(string:`addr`)?order=desc
 
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/1/history/EM2wjL3jgNHDZtR1e266V269n5WH6sYbCf HTTP/1.1
+      GET /api/v1/history/EM2wjL3jgNHDZtR1e266V269n5WH6sYbCf HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -1272,14 +1272,14 @@ get transaction history with your desired order
 Get spending address public key
 ------------------------------------------------
 
-.. http:get:: /api/1/pubkey/(string:`addr`)
+.. http:get:: /api/v1/pubkey/(string:`addr`)
 
 If we can get the public key of this adress.
    **Example request**:
 
    .. sourcecode:: http
 
-      GET /api/1/pubkey/ELbKQrj8DTYn2gU7KBejcNWb4ix4EAGDmy HTTP/1.1
+      GET /api/v1/pubkey/ELbKQrj8DTYn2gU7KBejcNWb4ix4EAGDmy HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -1299,7 +1299,7 @@ If we can not get the public key of this adress.
 
    .. sourcecode:: http
 
-      GET /api/1/pubkey/EbxU18T3M9ufnrkRY7NLt6sKyckDW4VAsA HTTP/1.1
+      GET /api/v1/pubkey/EbxU18T3M9ufnrkRY7NLt6sKyckDW4VAsA HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -1671,13 +1671,13 @@ Get coinmarketcap price
 node fee
 ------------------------------------------------
 
-.. http:get:: /api/1/fee
+.. http:get:: /api/v1/fee
 
    **Example request**:
 
    .. sourcecode:: http
 
-      get /api/1/fee HTTP/1.1
+      get /api/v1/fee HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -1695,13 +1695,13 @@ node fee
 node reward address
 ------------------------------------------------
 
-.. http:get:: /api/1/node/reward/address
+.. http:get:: /api/v1/node/reward/address
 
    **Example request**:
 
    .. sourcecode:: http
 
-      get /api/1/node/reward/address HTTP/1.1
+      get /api/v1/node/reward/address HTTP/1.1
       Host: localhost
 
    **Example response**:
@@ -1719,13 +1719,13 @@ node reward address
 summary of all spend utxo value
 -----------------------------------------
 
-.. http:post:: /api/1/spend/utxos
+.. http:post:: /api/v1/spend/utxos
 
    **Example request**:
 
    .. sourcecode:: http
 
-    POST /api/1/spend/utxos HTTP/1.1
+    POST /api/v1/spend/utxos HTTP/1.1
     Host: localhost
 
       {
