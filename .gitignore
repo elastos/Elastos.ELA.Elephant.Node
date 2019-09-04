@@ -10,3 +10,4 @@ nohup.out
 *.tar
 xxx
 elephant
+config.json

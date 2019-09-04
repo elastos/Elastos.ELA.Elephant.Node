@@ -378,7 +378,7 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 						value = r
 					}
 					var realFee uint64 = uint64(fee)
-					var rto []common2.Uint168
+					var rto = to
 					if transferType == INCOME {
 						realFee = 0
 						rto = []common2.Uint168{k}
@@ -416,7 +416,7 @@ func (c *ChainStoreExtend) persistTxHistory(blk *Block) error {
 					txh.Fee = uint64(fee)
 					if len(to) > 3 {
 						txh.Outputs = to[0:3]
-					}else {
+					} else {
 						txh.Outputs = to
 					}
 					txh.Memo = memo
