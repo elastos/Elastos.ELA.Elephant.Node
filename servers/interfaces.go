@@ -1875,12 +1875,6 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 	}
 	utxoOutputsArray := make([]map[string]interface{}, 0)
-	if config.Parameters.PowConfiguration.MinTxFee > 100 {
-		utxoOutputsDetail := make(map[string]interface{})
-		utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
-		utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
-		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
-	}
 	for i, v := range outputs {
 		if i == 1 {
 			if config.Parameters.PowConfiguration.MinTxFee > 100 {
