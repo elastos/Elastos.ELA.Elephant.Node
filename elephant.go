@@ -375,15 +375,22 @@ func printSyncState(db blockchain.IChainStore, server elanet.Server) {
 
 func nodeInfo() {
 	// Enter PayToAddr private key
-	log.Info("\nPlease enter node reward address private key: ")
 	var err error
-	privKey, err := gopass.GetPasswd()
-	if err != nil {
-		printErrorAndExit(err)
-	}
-	servers.NodePrivKey, err = hex.DecodeString(string(privKey))
-	if err != nil {
-		printErrorAndExit(err)
+	if len(os.Args) == 2 {
+		servers.NodePrivKey, err = hex.DecodeString(os.Args[1])
+		if err != nil {
+			printErrorAndExit(err)
+		}
+	} else {
+		log.Info("\nPlease enter node reward address private key: ")
+		privKey, err := gopass.GetPasswd()
+		if err != nil {
+			printErrorAndExit(err)
+		}
+		servers.NodePrivKey, err = hex.DecodeString(string(privKey))
+		if err != nil {
+			printErrorAndExit(err)
+		}
 	}
 	pub, err := common.GetPublicKeyFromPrivKey(hex.EncodeToString(servers.NodePrivKey))
 	if err != nil {

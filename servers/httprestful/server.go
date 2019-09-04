@@ -35,22 +35,22 @@ const (
 	ApiGetTransactionPool  = "/api/v1/transactionpool"
 
 	//extended
-	ApiGetHistory           = "/api/1/history/:addr"
-	ApiCreateTx             = "/api/1/createTx"
-	ApiCmc                  = "/api/1/cmc"
-	ApiGetPublicKey         = "/api/1/pubkey/:addr"
-	ApiGetBalance           = "/api/1/balance/:addr"
-	ApiSendRawTx            = "/api/1/sendRawTx"
-	ApiCreateVoteTx         = "/api/1/createVoteTx"
-	ApiCurrHeight           = "/api/1/currHeight"
-	ApiGetNodeFee           = "/api/1/fee"
-	ApiProducerStatistic    = "/api/1/dpos/producer/:producer/:height"
-	ApiVoterStatistic       = "/api/1/dpos/address/:addr"
-	ApiProducerRankByHeight = "/api/1/dpos/rank/height/:height"
-	ApiTotalVoteByHeight    = "/api/1/dpos/vote/height/:height"
-	ApiGetProducerByTxs     = "/api/1/dpos/transaction/producer"
-	ApiNodeRewardAddr       = "/api/1/node/reward/address"
-	ApiGetSpendUtxos        = "/api/1/spend/utxos"
+	ApiGetHistory           = "/api/v1/history/:addr"
+	ApiCreateTx             = "/api/v1/createTx"
+	ApiCmc                  = "/api/v1/cmc"
+	ApiGetPublicKey         = "/api/v1/pubkey/:addr"
+	ApiGetBalance           = "/api/v1/balance/:addr"
+	ApiSendRawTx            = "/api/v1/sendRawTx"
+	ApiCreateVoteTx         = "/api/v1/createVoteTx"
+	ApiCurrHeight           = "/api/v1/currHeight"
+	ApiGetNodeFee           = "/api/v1/fee"
+	ApiProducerStatistic    = "/api/v1/dpos/producer/:producer/:height"
+	ApiVoterStatistic       = "/api/v1/dpos/address/:addr"
+	ApiProducerRankByHeight = "/api/v1/dpos/rank/height/:height"
+	ApiTotalVoteByHeight    = "/api/v1/dpos/vote/height/:height"
+	ApiGetProducerByTxs     = "/api/v1/dpos/transaction/producer"
+	ApiNodeRewardAddr       = "/api/v1/node/reward/address"
+	ApiGetSpendUtxos        = "/api/v1/spend/utxos"
 )
 
 var ext_api_handle = map[string]bool{
@@ -305,7 +305,25 @@ func (rt *restServer) initGetHandler() {
 			var resp map[string]interface{}
 
 			url := rt.getPath(r.URL.Path)
+			if h, ok := rt.getMap[url]; ok {
+				req = rt.getParams(r, url, req)
+				resp = h.handler(req)
+			} else {
+				if _, ok = ext_api_handle[k]; !ok {
+					resp = servers.ResponsePack(InvalidMethod, "")
+				} else {
+					resp = servers.ResponsePackEx(InvalidMethod, "")
+				}
+			}
+			rt.response(w, resp)
+		})
+		k = strings.Replace(k, "/api/v1/", "/api/1/", 1)
+		rt.router.Get(k, func(w http.ResponseWriter, r *http.Request) {
 
+			var req = make(map[string]interface{})
+			var resp map[string]interface{}
+			r.URL.Path = strings.Replace(r.URL.Path, "/api/1/", "/api/v1/", 1)
+			url := rt.getPath(r.URL.Path)
 			if h, ok := rt.getMap[url]; ok {
 				req = rt.getParams(r, url, req)
 				resp = h.handler(req)
@@ -331,6 +349,36 @@ func (rt *restServer) initPostHandler() {
 			var req = make(map[string]interface{})
 			var resp map[string]interface{}
 
+			url := rt.getPath(r.URL.Path)
+			if h, ok := rt.postMap[url]; ok {
+				if err := json.Unmarshal(body, &req); err == nil {
+					req = rt.getParams(r, url, req)
+					resp = h.handler(req)
+				} else {
+					if _, ok = ext_api_handle[k]; !ok {
+						resp = servers.ResponsePack(InvalidMethod, "")
+					} else {
+						resp = servers.ResponsePackEx(InvalidMethod, "")
+					}
+				}
+			} else {
+				if _, ok = ext_api_handle[k]; !ok {
+					resp = servers.ResponsePack(InvalidMethod, "")
+				} else {
+					resp = servers.ResponsePackEx(InvalidMethod, "")
+				}
+			}
+			rt.response(w, resp)
+		})
+		k = strings.Replace(k, "/api/v1/", "/api/1/", 1)
+		rt.router.Post(k, func(w http.ResponseWriter, r *http.Request) {
+
+			body, _ := ioutil.ReadAll(r.Body)
+			defer r.Body.Close()
+
+			var req = make(map[string]interface{})
+			var resp map[string]interface{}
+			r.URL.Path = strings.Replace(r.URL.Path, "/api/1/", "/api/v1/", 1)
 			url := rt.getPath(r.URL.Path)
 			if h, ok := rt.postMap[url]; ok {
 				if err := json.Unmarshal(body, &req); err == nil {
