@@ -1347,32 +1347,49 @@ Calculate UTXO that is about to spend
       Content-Type: application/json
 
         {
-          "Desc": "Success",
-          "Error": 0,
-          "Result": {
-              "Transactions": [
-                  {
-                      "Fee": 100,
-                      "Outputs": [
-                          {
-                              "address": "EQNJEA8XhraX8a6SBq98ENU5QSW6nvgSHJ",
-                              "amount": 1091460300
-                          },
-                          {
-                              "address": "ER1ouzeLNKQTqPrDHxgAGw2eiCXPhgznVy",
-                              "amount": 404539600
-                          }
-                      ],
-                      "UTXOInputs": [
-                          {
-                              "address": "ER1ouzeLNKQTqPrDHxgAGw2eiCXPhgznVy",
-                              "index": 1,
-                              "txid": "05f0e57a933da53aea6c0e27895f9d294c812f743506170570124504bed21ea6"
-                          }
-                      ]
-                  }
-              ]
-          }
+            "result": {
+                "Transactions": [
+                    {
+                        "Fee": 100,
+                        "Outputs": [
+                            {
+                                "address": "EN8A9xHUNCJ9XEtaVFWa8xsrxewH88fMUf",
+                                "amount": 4700
+                            },
+                            {
+                                "address": "ERZYCmcd12ctAfdiTMeuLrSdHdNXzYP1kg",
+                                "amount": 2000000000
+                            },
+                            {
+                                "address": "ERZYCmcd12ctAfdiTMeuLrSdHdNXzYP1kg",
+                                "amount": 20000010000
+                            },
+                            {
+                                "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+                                "amount": 1053883203946
+                            }
+                        ],
+                        "Proof": {
+                            "Msg": "7b225472616e73616374696f6e73223a5b7b22466565223a3130302c224f757470757473223a5b7b2261646472657373223a22454e3841397848554e434a39584574615646576138787372786577483838664d5566222c22616d6f756e74223a343730307d2c7b2261646472657373223a2245525a59436d63643132637441666469544d65754c72536448644e587a5950316b67222c22616d6f756e74223a323030303030303030307d2c7b2261646472657373223a2245525a59436d63643132637441666469544d65754c72536448644e587a5950316b67222c22616d6f756e74223a32303030303031303030307d2c7b2261646472657373223a224559483639725241664451324852613335626d59526836556f415a3875336e375a4a222c22616d6f756e74223a313035333838333230333934367d5d2c225554584f496e70757473223a5b7b2261646472657373223a224559483639725241664451324852613335626d59526836556f415a3875336e375a4a222c22696e646578223a302c2274786964223a2236373532616132346234303663306138306631343633393838313461646639636333643561653031383037346534663364646533363365323764386263633166227d2c7b2261646472657373223a224559483639725241664451324852613335626d59526836556f415a3875336e375a4a222c22696e646578223a312c2274786964223a2239343630626634363062366238363939636231633136373732323935656265383862313037306361663932616561626539336662346139373939643235356164227d5d7d5d7d",
+                            "Pub": "0257b0a7a0b536d9cdb8ba748accd560dbc1b9e2fb77a7983329f2d0563f7fa144",
+                            "Signature": "2a0ed9fbb93aede771b76c881284ae3e1e6d7523199f52580d3d037b38b52f7b590c307391ad76c3706c15acbd5b442a699c270f503f44c0c901511bedc4f7d5"
+                        },
+                        "UTXOInputs": [
+                            {
+                                "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+                                "index": 0,
+                                "txid": "6752aa24b406c0a80f146398814adf9cc3d5ae018074e4f3dde363e27d8bcc1f"
+                            },
+                            {
+                                "address": "EYH69rRAfDQ2HRa35bmYRh6UoAZ8u3n7ZJ",
+                                "index": 1,
+                                "txid": "9460bf460b6b8699cb1c16772295ebe88b1070caf92aeabe93fb4a9799d255ad"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "status": 200
         }
 
 Get coinmarketcap price
