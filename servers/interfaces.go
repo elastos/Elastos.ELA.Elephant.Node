@@ -5,16 +5,11 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
 	common2 "github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
-	"github.com/elastos/Elastos.ELA/crypto"
-
-	"sort"
-	"strconv"
-	"strings"
-
 	aux "github.com/elastos/Elastos.ELA/auxpow"
 	"github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
@@ -24,6 +19,7 @@ import (
 	. "github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/core/types/outputpayload"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
+	"github.com/elastos/Elastos.ELA/crypto"
 	"github.com/elastos/Elastos.ELA/dpos"
 	"github.com/elastos/Elastos.ELA/dpos/state"
 	"github.com/elastos/Elastos.ELA/elanet"
@@ -32,6 +28,9 @@ import (
 	"github.com/elastos/Elastos.ELA/mempool"
 	"github.com/elastos/Elastos.ELA/p2p/msg"
 	"github.com/elastos/Elastos.ELA/pow"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 var (
@@ -657,6 +656,7 @@ func SendRawTransaction(param Params) map[string]interface{} {
 }
 
 func SendRawTx(param Params) map[string]interface{} {
+
 	str, ok := param.String("data")
 	if !ok {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "need a string parameter named data")
@@ -671,11 +671,24 @@ func SendRawTx(param Params) map[string]interface{} {
 		return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
 	}
 
+	if !CheckTransactionReward(&txn) {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, errors.New("Invalid raw transaction, node reward address can not find or node reward amount not match"))
+	}
+
 	if err := VerifyAndSendTx(&txn); err != nil {
 		return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
 	}
 
 	return ResponsePackEx(ELEPHANT_SUCCESS, ToReversedString(txn.Hash()))
+}
+
+func CheckTransactionReward(tx *Transaction) bool {
+	for _, out := range tx.Outputs {
+		if addr, _ := out.ProgramHash.ToAddress(); addr == Config.PowConfiguration.PayToAddr && int64(out.Value) == int64(Config.PowConfiguration.MinTxFee-100) {
+			return true
+		}
+	}
+	return false
 }
 
 func GetBlockHeight(param Params) map[string]interface{} {
