@@ -82,7 +82,6 @@ func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string)
 		peerInvalid: make(chan bool, 1),
 	}
 	DefaultChainStoreEx = c
-	c.peerInvalid <- false
 	go c.loop()
 	go c.initTask()
 	return c, nil

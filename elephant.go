@@ -294,10 +294,7 @@ func startNode(c *cli.Context) {
 		for {
 			select {
 			case invalid := <-chainStoreEx.IsPeerInvalid():
-				if !invalid {
-					log.Info("Start the P2P networks")
-					server.Start()
-				} else {
+				if invalid {
 					peers := server.ConnectedPeers()
 					log.Infof("Connected Peers %v", peers)
 					for _, peer := range peers {
@@ -309,6 +306,8 @@ func startNode(c *cli.Context) {
 			}
 		}
 	}()
+	log.Info("Start the P2P networks")
+	server.Start()
 	defer server.Stop()
 	log.Info("Start services")
 	if cfg.EnableRPC {
