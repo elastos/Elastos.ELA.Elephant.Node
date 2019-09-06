@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
 	common2 "github.com/elastos/Elastos.ELA.Elephant.Node/common"
@@ -672,12 +671,16 @@ func SendRawTx(param Params) map[string]interface{} {
 	}
 
 	if !CheckTransactionReward(&txn) {
-		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, errors.New("Invalid raw transaction, node reward address can not find or node reward amount not match"))
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid raw transaction, node reward address can not find or node reward amount not match")
 	}
 
 	if err := VerifyAndSendTx(&txn); err != nil {
 		return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
 	}
+
+	txid, _ := common2.ReverseHexString(txn.Hash().String())
+
+	log.Infof("[SendRawTx] receiving tx : %s", txid)
 
 	return ResponsePackEx(ELEPHANT_SUCCESS, ToReversedString(txn.Hash()))
 }

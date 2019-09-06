@@ -178,6 +178,13 @@ func (c ChainStoreExtend) initTask() {
 			c.rp <- true
 		}
 	})
+	c.AddFunc("@every 30m", func() {
+		if height := c.GetHeight(); height == c.mark {
+			c.peerInvalid <- true
+		} else {
+			c.mark = height
+		}
+	})
 	c.Start()
 }
 

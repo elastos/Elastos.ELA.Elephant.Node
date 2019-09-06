@@ -290,11 +290,26 @@ func startNode(c *cli.Context) {
 		printErrorAndExit(err)
 	}
 	pgBar.Stop()
-
-	log.Info("Start the P2P networks")
-	server.Start()
+	go func() {
+		for {
+			select {
+			case invalid := <-chainStoreEx.IsPeerInvalid():
+				if !invalid {
+					log.Info("Start the P2P networks")
+					server.Start()
+				} else {
+					peers := server.ConnectedPeers()
+					log.Infof("Connected Peers %v", peers)
+					for _, peer := range peers {
+						addr := peer.ToPeer().Addr()
+						log.Infof("Disconnect peer %s", addr)
+						server.DisconnectByAddr(addr)
+					}
+				}
+			}
+		}
+	}()
 	defer server.Stop()
-
 	log.Info("Start services")
 	if cfg.EnableRPC {
 		go httpjsonrpc.StartRPCServer()

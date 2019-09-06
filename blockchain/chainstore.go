@@ -44,8 +44,10 @@ type ChainStoreExtend struct {
 	quitEx   chan chan bool
 	mu       sync.Mutex
 	*cron.Cron
-	rp         chan bool
-	checkPoint bool
+	rp          chan bool
+	checkPoint  bool
+	peerInvalid chan bool
+	mark        uint32
 }
 
 func (c *ChainStoreExtend) AddTask(task interface{}) {
@@ -77,8 +79,10 @@ func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string)
 		mu:          sync.Mutex{},
 		rp:          make(chan bool, 1),
 		checkPoint:  true,
+		peerInvalid: make(chan bool, 1),
 	}
 	DefaultChainStoreEx = c
+	c.peerInvalid <- false
 	go c.loop()
 	go c.initTask()
 	return c, nil
@@ -598,4 +602,8 @@ func (c *ChainStoreExtend) GetStoredHeightExt(height uint32) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (c *ChainStoreExtend) IsPeerInvalid() chan bool {
+	return c.peerInvalid
 }
