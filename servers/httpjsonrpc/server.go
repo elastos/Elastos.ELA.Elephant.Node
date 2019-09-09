@@ -65,6 +65,7 @@ func StartRPCServer() {
 	mainMux["submitauxblock"] = SubmitAuxBlock
 	mainMux["createauxblock"] = CreateAuxBlock
 	// mining interfaces
+	mainMux["getmininginfo"] = GetMiningInfo
 	mainMux["togglemining"] = ToggleMining
 	mainMux["discretemining"] = DiscreteMining
 	// vote interfaces
