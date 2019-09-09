@@ -5,6 +5,7 @@ import (
 	. "github.com/elastos/Elastos.ELA/blockchain"
 	"github.com/elastos/Elastos.ELA/common"
 	. "github.com/elastos/Elastos.ELA/core/types"
+	"github.com/elastos/Elastos.ELA/p2p/server"
 )
 
 var DefaultChainStoreEx IChainStoreExtend
@@ -21,4 +22,5 @@ type IChainStoreExtend interface {
 	GetDposReward(addr string) (*common.Fixed64, error)
 	GetDposRewardByHeight(addr string, height uint32) (*common.Fixed64, error)
 	IsPeerInvalid() chan bool
+	CheckPeers(server server.IServer)
 }

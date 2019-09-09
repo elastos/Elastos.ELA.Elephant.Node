@@ -290,23 +290,8 @@ func startNode(c *cli.Context) {
 		printErrorAndExit(err)
 	}
 	pgBar.Stop()
-	go func() {
-		for {
-			select {
-			case invalid := <-chainStoreEx.IsPeerInvalid():
-				if invalid {
-					peers := server.ConnectedPeers()
-					log.Infof("Connected Peers %v", peers)
-					for _, peer := range peers {
-						addr := peer.ToPeer().Addr()
-						log.Infof("Disconnect peer %s", addr)
-						server.DisconnectByAddr(addr)
-					}
-				}
-			}
-		}
-	}()
 	log.Info("Start the P2P networks")
+	go chainStoreEx.CheckPeers(server)
 	server.Start()
 	defer server.Stop()
 	log.Info("Start services")

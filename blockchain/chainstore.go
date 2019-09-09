@@ -13,6 +13,7 @@ import (
 	. "github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/core/types/outputpayload"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
+	"github.com/elastos/Elastos.ELA/p2p/server"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/robfig/cron"
 	"io"
@@ -605,4 +606,23 @@ func (c *ChainStoreExtend) GetStoredHeightExt(height uint32) (bool, error) {
 
 func (c *ChainStoreExtend) IsPeerInvalid() chan bool {
 	return c.peerInvalid
+}
+
+func (c *ChainStoreExtend) CheckPeers(server server.IServer) {
+	for {
+		select {
+		case invalid := <-c.IsPeerInvalid():
+			if invalid {
+				peers := server.ConnectedPeers()
+				log.Infof("Connected Peers %v", peers)
+				for _, peer := range peers {
+					addr := peer.ToPeer().Addr()
+					log.Infof("Disconnect peer %s", addr)
+					server.DisconnectByAddr(addr)
+				}
+				log.Info("rollback arbitrator")
+				DefaultLedger.Arbitrators.RecoverFromCheckPoints(c.GetHeight() - 1000)
+			}
+		}
+	}
 }
