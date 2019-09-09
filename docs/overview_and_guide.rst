@@ -109,7 +109,23 @@ Nginx config Example::
 
         # pass requests for dynamic content to rails/turbogears/zope, et al
 
-        location ~ ^/api/1/balance {
+        location ~ ^/api/[v]?1/wrap/rpc {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
+            proxy_pass http://localhost:20336;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/[v]?1/node {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -125,7 +141,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/cmc {
+        location ~ ^/api/[v]?1/block {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -141,7 +157,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/createTx {
+        location ~ ^/api/[v]?1/transaction {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -157,7 +173,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/createVoteTx {
+        location ~ ^/api/[v]?1/asset {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -173,7 +189,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/history {
+        location ~ ^/api/[v]?1/transactionpool {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -189,7 +205,8 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/sendRawTx {
+
+        location ~ ^/api/[v]?1/balance {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -205,7 +222,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/pubkey {
+        location ~ ^/api/[v]?1/cmc {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -221,7 +238,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/currHeight {
+        location ~ ^/api/[v]?1/createTx {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -237,7 +254,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/dpos {
+        location ~ ^/api/[v]?1/createVoteTx {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -253,7 +270,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/fee {
+        location ~ ^/api/[v]?1/history {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -269,7 +286,7 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/node/reward/address {
+        location ~ ^/api/[v]?1/sendRawTx {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
@@ -285,7 +302,87 @@ Nginx config Example::
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location ~ ^/api/1/spend/utxos {
+        location ~ ^/api/[v]?1/pubkey {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/[v]?1/currHeight {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/[v]?1/dpos {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/[v]?1/fee {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/[v]?1/node/reward/address {
+            if ($request_method = OPTIONS ) {
+              add_header "Access-Control-Allow-Origin"  *;
+              add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
+              add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept";
+              return 200;
+            }
+            proxy_pass http://localhost:20334;
+            proxy_connect_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location ~ ^/api/[v]?1/spend/utxos {
             if ($request_method = OPTIONS ) {
               add_header "Access-Control-Allow-Origin"  *;
               add_header "Access-Control-Allow-Methods" "GET, POST, OPTIONS, HEAD";
