@@ -206,6 +206,7 @@ func startNode(c *cli.Context) {
 	}
 	defer chainStore.Close()
 	defer chainStoreEx.CloseEx()
+	go chainStoreEx.CheckArbitrators()
 
 	ledger.Blockchain = chain // fixme
 	blockMemPool.Chain = chain
@@ -291,7 +292,6 @@ func startNode(c *cli.Context) {
 	}
 	pgBar.Stop()
 	log.Info("Start the P2P networks")
-	go chainStoreEx.CheckPeers(server)
 	server.Start()
 	defer server.Stop()
 	log.Info("Start services")

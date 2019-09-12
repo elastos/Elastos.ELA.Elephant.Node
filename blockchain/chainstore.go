@@ -14,7 +14,6 @@ import (
 	. "github.com/elastos/Elastos.ELA/core/types"
 	"github.com/elastos/Elastos.ELA/core/types/outputpayload"
 	"github.com/elastos/Elastos.ELA/core/types/payload"
-	"github.com/elastos/Elastos.ELA/p2p/server"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/robfig/cron"
 	"io"
@@ -609,7 +608,7 @@ func (c *ChainStoreExtend) IsArbitratorInvalid() chan bool {
 	return c.arbitratorInvalid
 }
 
-func (c *ChainStoreExtend) CheckArbitrators(server server.IServer) {
+func (c *ChainStoreExtend) CheckArbitrators() {
 	for {
 		select {
 		case invalid := <-c.IsArbitratorInvalid():
