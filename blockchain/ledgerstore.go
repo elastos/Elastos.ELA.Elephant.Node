@@ -21,6 +21,6 @@ type IChainStoreExtend interface {
 	GetPublicKey(addr string) string
 	GetDposReward(addr string) (*common.Fixed64, error)
 	GetDposRewardByHeight(addr string, height uint32) (*common.Fixed64, error)
-	IsPeerInvalid() chan bool
-	CheckPeers(server server.IServer)
+	IsArbitratorInvalid() chan bool
+	CheckArbitrators(server server.IServer)
 }

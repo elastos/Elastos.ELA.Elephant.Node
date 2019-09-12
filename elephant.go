@@ -7,6 +7,7 @@ import (
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/common"
+	state2 "github.com/elastos/Elastos.ELA.Elephant.Node/dpos/state"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httpjsonrpc"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/servers/httpnodeinfo"
@@ -167,7 +168,6 @@ func startNode(c *cli.Context) {
 	blockMemPool.Store = chainStore
 
 	blockchain.DefaultLedger = &ledger // fixme
-
 	arbiters, err := state.NewArbitrators(activeNetParams, nil,
 		chainStore.GetHeight, func() (*types.Block, error) {
 			hash := chainStore.GetCurrentBlockHash()
@@ -193,7 +193,7 @@ func startNode(c *cli.Context) {
 		printErrorAndExit(err)
 	}
 	ledger.Arbitrators = arbiters // fixme
-
+	state2.DefaultArbitratorsEx = arbiters
 	chain, err := blockchain.New(chainStore, activeNetParams, arbiters.State)
 	if err != nil {
 		printErrorAndExit(err)

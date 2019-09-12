@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/common"
 	"github.com/elastos/Elastos.ELA.Elephant.Node/core/types"
+	"github.com/elastos/Elastos.ELA.Elephant.Node/dpos/state"
 	. "github.com/elastos/Elastos.ELA/blockchain"
 	common2 "github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/common/log"
@@ -45,10 +46,10 @@ type ChainStoreExtend struct {
 	quitEx   chan chan bool
 	mu       sync.Mutex
 	*cron.Cron
-	rp          chan bool
-	checkPoint  bool
-	peerInvalid chan bool
-	mark        uint32
+	rp                chan bool
+	checkPoint        bool
+	arbitratorInvalid chan bool
+	mark              uint32
 }
 
 func (c *ChainStoreExtend) AddTask(task interface{}) {
@@ -71,16 +72,16 @@ func NewChainStoreEx(chain *BlockChain, chainstore IChainStore, filePath string)
 		return nil, err
 	}
 	c := &ChainStoreExtend{
-		IChainStore: chainstore,
-		IStore:      st,
-		chain:       chain,
-		taskChEx:    make(chan interface{}, 100),
-		quitEx:      make(chan chan bool, 1),
-		Cron:        cron.New(),
-		mu:          sync.Mutex{},
-		rp:          make(chan bool, 1),
-		checkPoint:  true,
-		peerInvalid: make(chan bool, 1),
+		IChainStore:       chainstore,
+		IStore:            st,
+		chain:             chain,
+		taskChEx:          make(chan interface{}, 100),
+		quitEx:            make(chan chan bool, 1),
+		Cron:              cron.New(),
+		mu:                sync.Mutex{},
+		rp:                make(chan bool, 1),
+		checkPoint:        true,
+		arbitratorInvalid: make(chan bool, 1),
 	}
 	DefaultChainStoreEx = c
 	go c.loop()
@@ -604,24 +605,17 @@ func (c *ChainStoreExtend) GetStoredHeightExt(height uint32) (bool, error) {
 	return true, nil
 }
 
-func (c *ChainStoreExtend) IsPeerInvalid() chan bool {
-	return c.peerInvalid
+func (c *ChainStoreExtend) IsArbitratorInvalid() chan bool {
+	return c.arbitratorInvalid
 }
 
-func (c *ChainStoreExtend) CheckPeers(server server.IServer) {
+func (c *ChainStoreExtend) CheckArbitrators(server server.IServer) {
 	for {
 		select {
-		case invalid := <-c.IsPeerInvalid():
+		case invalid := <-c.IsArbitratorInvalid():
 			if invalid {
-				peers := server.ConnectedPeers()
-				log.Infof("Connected Peers %v", peers)
-				for _, peer := range peers {
-					addr := peer.ToPeer().Addr()
-					log.Infof("Disconnect peer %s", addr)
-					server.DisconnectByAddr(addr)
-				}
-				log.Info("rollback arbitrator")
-				DefaultLedger.Arbitrators.RecoverFromCheckPoints(c.GetHeight() - 1000)
+				log.Info("ForceChange Arbitrator")
+				state.DefaultArbitratorsEx.ForceChange(c.GetHeight())
 			}
 		}
 	}

@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/elastos/Elastos.ELA/common"
 	"github.com/elastos/Elastos.ELA/crypto"
 	"testing"
 )
@@ -81,4 +82,6 @@ func Test_signVerify(t *testing.T) {
 	if err != nil {
 		println("Verify failed")
 	}
+	i, _ := common.Uint168FromAddress("EZqVeKQzGYTLmA32wFKH6FncQ5otAbrYEp")
+	println(i.String())
 }
