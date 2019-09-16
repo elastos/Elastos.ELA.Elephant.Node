@@ -1748,7 +1748,6 @@ func CreateTx(param Params) map[string]interface{} {
 	}
 	paraListMap := make(map[string]interface{})
 	txList := make([]map[string]interface{}, 0)
-	paraListMap["Transactions"] = &txList
 	var index = -1
 	var multiTxNum = 0
 	var bundleUtxoSize = 100
@@ -1765,7 +1764,7 @@ func CreateTx(param Params) map[string]interface{} {
 		for j, utxo := range utxos {
 			index = j
 			spendMoney += int64(utxo.Value)
-			multiTxNum = j%bundleUtxoSize + 1
+			multiTxNum = j/bundleUtxoSize + 1
 			if spendMoney >= smAmt+int64(config.Parameters.PowConfiguration.MinTxFee*multiTxNum) {
 				hasEnoughFee = true
 				break
@@ -1776,6 +1775,8 @@ func CreateTx(param Params) map[string]interface{} {
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 		}
 
+		var hasGiveLeftMoney = false
+		leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee*multiTxNum) - smAmt
 		for h := 0; h < multiTxNum; h++ {
 			txListMap := make(map[string]interface{})
 			txList = append(txList, txListMap)
@@ -1799,37 +1800,21 @@ func CreateTx(param Params) map[string]interface{} {
 				output := outputs[0].(map[string]interface{})
 				utxoOutputsDetail := make(map[string]interface{})
 				utxoOutputsDetail["address"] = output["addr"]
-				if multiTxNum == 1 {
-					switch output["amt"].(type) {
-					case float64:
-						utxoOutputsDetail["amount"] = output["amt"].(float64)
-					case string:
-						var err error
-						utxoOutputsDetail["amount"], err = strconv.ParseFloat(output["amt"].(string), 64)
-						if err != nil {
-							return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
-						}
-					case int64:
-						utxoOutputsDetail["amount"] = output["amt"].(int64)
-					default:
-						return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
+				if !hasGiveLeftMoney && currTxSum >= leftMoney+int64(config.Parameters.PowConfiguration.MinTxFee) {
+					if leftMoney > 0 {
+						utxoOutputsDetailLeft := make(map[string]interface{})
+						utxoOutputsDetailLeft["address"] = inputs[0]
+						utxoOutputsDetailLeft["amount"] = leftMoney
+						utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetailLeft)
 					}
+					hasGiveLeftMoney = true
+					utxoOutputsDetail["amount"] = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee) - leftMoney
 				} else {
-					utxoOutputsDetail["amount"] = currTxSum
+					utxoOutputsDetail["amount"] = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
 				}
 				utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 			} else {
 				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Only support single output")
-			}
-
-			if h == multiTxNum-1 {
-				leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee*multiTxNum) - smAmt
-				if leftMoney > 0 {
-					utxoOutputsDetail := make(map[string]interface{})
-					utxoOutputsDetail["address"] = inputs[0]
-					utxoOutputsDetail["amount"] = leftMoney
-					utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
-				}
 			}
 
 			if config.Parameters.PowConfiguration.MinTxFee > 100 && common2.Conf.EarnReward {
@@ -1838,7 +1823,9 @@ func CreateTx(param Params) map[string]interface{} {
 				utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
 				utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 			}
-
+			if !hasGiveLeftMoney {
+				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, "Not giving left money , logic error")
+			}
 			txListMap["UTXOInputs"] = utxoInputsArray
 			txListMap["Outputs"] = utxoOutputsArray
 			if common2.Conf.EarnReward {
@@ -1847,7 +1834,11 @@ func CreateTx(param Params) map[string]interface{} {
 				txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
 			}
 
-			msg, err := json.Marshal(&paraListMap)
+			paraListMapTmp := make(map[string]interface{})
+			txListTmp := make([]map[string]interface{}, 0)
+			txListTmp = append(txListTmp, txListMap)
+			paraListMapTmp["Transactions"] = txListTmp
+			msg, err := json.Marshal(&paraListMapTmp)
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
 			}
@@ -1858,10 +1849,10 @@ func CreateTx(param Params) map[string]interface{} {
 			proof := make(map[string]interface{})
 			txListMap["Postmark"] = proof
 			proof["signature"] = hex.EncodeToString(signature)
-			proof["msg"] = hex.EncodeToString(msg)
 			proof["pub"] = hex.EncodeToString(NodePubKey)
 		}
 	}
+	paraListMap["Transactions"] = txList
 	if !hasEnoughFee {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 	}
