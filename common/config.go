@@ -8,6 +8,7 @@ import (
 
 type config struct {
 	Cmc Cmc
+	EarnReward bool
 }
 
 type Cmc struct {

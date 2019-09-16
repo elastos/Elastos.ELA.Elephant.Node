@@ -1789,7 +1789,7 @@ func CreateTx(param Params) map[string]interface{} {
 	utxoOutputsDetail["amount"] = leftMoney
 	utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
 
-	if config.Parameters.PowConfiguration.MinTxFee > 100 {
+	if config.Parameters.PowConfiguration.MinTxFee > 100 && common2.Conf.EarnReward {
 		utxoOutputsDetail := make(map[string]interface{})
 		utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
 		utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
@@ -1914,7 +1914,7 @@ func CreateVoteTx(param Params) map[string]interface{} {
 	utxoOutputsArray := make([]map[string]interface{}, 0)
 	for i, v := range outputs {
 		if i == 1 {
-			if config.Parameters.PowConfiguration.MinTxFee > 100 {
+			if config.Parameters.PowConfiguration.MinTxFee > 100 && common2.Conf.EarnReward {
 				utxoOutputsDetail := make(map[string]interface{})
 				utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
 				utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
