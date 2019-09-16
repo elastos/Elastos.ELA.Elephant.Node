@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	blockchain2 "github.com/elastos/Elastos.ELA.Elephant.Node/blockchain"
 	common2 "github.com/elastos/Elastos.ELA.Elephant.Node/common"
@@ -683,28 +682,44 @@ func SendRawTransaction(param Params) map[string]interface{} {
 func SendRawTx(param Params) map[string]interface{} {
 
 	str, ok := param.String("data")
-	if !ok {
-		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "need a string parameter named data")
+	var rawTxs []interface{}
+	if ok {
+		rawTxs = append(rawTxs, str)
+	} else {
+		rawTxs, ok = param["data"].([]interface{})
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "not valid request format")
+		}
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "not valid request format")
+		}
+	}
+	var retTxs []string
+	for _, rawTx := range rawTxs {
+		_, ok := rawTx.(string)
+		if !ok {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "not valid request format")
+		}
+		bys, err := common.HexStringToBytes(rawTx.(string))
+		if err != nil {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "hex string to bytes error")
+		}
+		var txn Transaction
+		if err := txn.Deserialize(bytes.NewReader(bys)); err != nil {
+			return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
+		}
+
+		if !CheckTransactionReward(&txn) {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid raw transaction, node reward address can not find or node reward amount not match")
+		}
+
+		if err := VerifyAndSendTx(&txn); err != nil {
+			return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
+		}
+		retTxs = append(retTxs, ToReversedString(txn.Hash()))
 	}
 
-	bys, err := common.HexStringToBytes(str)
-	if err != nil {
-		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "hex string to bytes error")
-	}
-	var txn Transaction
-	if err := txn.Deserialize(bytes.NewReader(bys)); err != nil {
-		return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
-	}
-
-	if !CheckTransactionReward(&txn) {
-		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, errors.New("Invalid raw transaction, node reward address can not find or node reward amount not match"))
-	}
-
-	if err := VerifyAndSendTx(&txn); err != nil {
-		return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
-	}
-
-	return ResponsePackEx(ELEPHANT_SUCCESS, ToReversedString(txn.Hash()))
+	return ResponsePackEx(ELEPHANT_SUCCESS, retTxs)
 }
 
 func CheckTransactionReward(tx *Transaction) bool {
