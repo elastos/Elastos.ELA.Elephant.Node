@@ -1779,7 +1779,6 @@ func CreateTx(param Params) map[string]interface{} {
 		leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee*multiTxNum) - smAmt
 		for h := 0; h < multiTxNum; h++ {
 			txListMap := make(map[string]interface{})
-			txList = append(txList, txListMap)
 			var currTxSum int64 = 0
 			utxoInputsArray := make([]map[string]interface{}, 0)
 			for z := h * bundleUtxoSize; z < (h+1)*bundleUtxoSize; z++ {
@@ -1793,6 +1792,10 @@ func CreateTx(param Params) map[string]interface{} {
 				utxoInputsDetail["address"] = addr
 				currTxSum += utxos[z].Value.IntValue()
 				utxoInputsArray = append(utxoInputsArray, utxoInputsDetail)
+			}
+
+			if currTxSum < int64(config.Parameters.PowConfiguration.MinTxFee) {
+				continue
 			}
 
 			utxoOutputsArray := make([]map[string]interface{}, 0)
@@ -1850,6 +1853,7 @@ func CreateTx(param Params) map[string]interface{} {
 			txListMap["Postmark"] = proof
 			proof["signature"] = hex.EncodeToString(signature)
 			proof["pub"] = hex.EncodeToString(NodePubKey)
+			txList = append(txList, txListMap)
 		}
 	}
 	paraListMap["Transactions"] = txList
@@ -1895,6 +1899,10 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find outputs")
 	}
 	var smAmt int64
+	if len(outputs) != 1 {
+		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Only support single output")
+	}
+	var sendAmt int64
 	for _, v := range outputs {
 		output := v.(map[string]interface{})
 		_, ok := output["addr"].(string)
@@ -1914,6 +1922,7 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		default:
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
 		}
+		sendAmt = int64(amt)
 		smAmt += int64(amt)
 	}
 	var left = total - smAmt - int64(config.Parameters.PowConfiguration.MinTxFee)
@@ -1922,98 +1931,147 @@ func CreateVoteTx(param Params) map[string]interface{} {
 	}
 	smAmt = total - int64(config.Parameters.PowConfiguration.MinTxFee)
 	outputs = append(outputs, map[string]interface{}{"addr": (inputs[0]).(string), "amt": left})
+
 	paraListMap := make(map[string]interface{})
 	txList := make([]map[string]interface{}, 0)
-	txListMap := make(map[string]interface{})
-	txList = append(txList, txListMap)
 	var index = -1
+	var multiTxNum = 0
+	var bundleUtxoSize = 100
+	if common2.Conf.BundleUtxoSize > 100 {
+		bundleUtxoSize = common2.Conf.BundleUtxoSize
+	}
 	var spendMoney int64 = 0
-	var hasEnoughFee = false
-	utxoInputsArray := make([]map[string]interface{}, 0)
+	var hasEnoughFee bool = false
 	for i, utxos := range utxoList {
+		if i >= 1 {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Only support single spend address")
+		}
 		addr := inputs[i].(string)
 		for j, utxo := range utxos {
 			index = j
 			spendMoney += int64(utxo.Value)
-			if spendMoney >= smAmt+int64(config.Parameters.PowConfiguration.MinTxFee) {
+			multiTxNum = j/bundleUtxoSize + 1
+			if spendMoney >= smAmt+int64(config.Parameters.PowConfiguration.MinTxFee*multiTxNum) {
 				hasEnoughFee = true
 				break
 			}
 		}
-		for z := 0; z <= index; z++ {
-			utxoInputsDetail := make(map[string]interface{})
-			b, _ := FromReversedString(utxos[z].TxID.String())
-			utxoInputsDetail["txid"] = hex.EncodeToString(b)
-			utxoInputsDetail["index"] = utxos[z].Index
-			utxoInputsDetail["address"] = addr
-			utxoInputsArray = append(utxoInputsArray, utxoInputsDetail)
+
+		if !hasEnoughFee {
+			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 		}
-		if hasEnoughFee {
-			break
+
+		var normalTransferAmtOver = false
+		var normalTransferLeft = sendAmt
+		leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee*multiTxNum) - smAmt
+		if leftMoney != 0 {
+			return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, "Vote Tx leftMoney not 0")
+		}
+		for h := 0; h < multiTxNum; h++ {
+			txListMap := make(map[string]interface{})
+			var currTxSum int64 = 0
+			utxoInputsArray := make([]map[string]interface{}, 0)
+			for z := h * bundleUtxoSize; z < (h+1)*bundleUtxoSize; z++ {
+				if z > index {
+					break
+				}
+				utxoInputsDetail := make(map[string]interface{})
+				b, _ := FromReversedString(utxos[z].TxID.String())
+				utxoInputsDetail["txid"] = hex.EncodeToString(b)
+				utxoInputsDetail["index"] = utxos[z].Index
+				utxoInputsDetail["address"] = addr
+				currTxSum += utxos[z].Value.IntValue()
+				utxoInputsArray = append(utxoInputsArray, utxoInputsDetail)
+			}
+
+			if currTxSum < int64(config.Parameters.PowConfiguration.MinTxFee) {
+				continue
+			}
+
+			utxoOutputsArray := make([]map[string]interface{}, 0)
+			if len(outputs) == 2 {
+				output := outputs[0].(map[string]interface{})
+				utxoOutputsDetail := make(map[string]interface{})
+				utxoOutputsDetail["address"] = output["addr"]
+
+				utxoOutputsDetailReward := make(map[string]interface{})
+				if config.Parameters.PowConfiguration.MinTxFee > 100 && common2.Conf.EarnReward {
+					utxoOutputsDetailReward["address"] = config.Parameters.PowConfiguration.PayToAddr
+					utxoOutputsDetailReward["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
+				}
+
+				output1 := outputs[1].(map[string]interface{})
+				utxoOutputsDetail1 := make(map[string]interface{})
+				utxoOutputsDetail1["address"] = output1["addr"]
+
+				if normalTransferAmtOver {
+					// first send address
+					utxoOutputsDetail["amount"] = 0
+
+					// owner address
+					utxoOutputsDetail1["amount"] = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
+					normalTransferAmtOver = true
+				} else {
+					if currTxSum >= normalTransferLeft+int64(config.Parameters.PowConfiguration.MinTxFee) {
+						// first send address
+						utxoOutputsDetail["amount"] = normalTransferLeft
+
+						// owner address
+						utxoOutputsDetail1["amount"] = currTxSum - normalTransferLeft - int64(config.Parameters.PowConfiguration.MinTxFee)
+					} else {
+						// first send address
+						utxoOutputsDetail["amount"] = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
+						normalTransferLeft = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
+
+						// owner address
+						utxoOutputsDetail1["amount"] = 0
+					}
+				}
+				utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
+				if config.Parameters.PowConfiguration.MinTxFee > 100 && common2.Conf.EarnReward {
+					utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetailReward)
+				}
+				utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail1)
+			} else {
+				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Only support single output")
+			}
+
+			if !normalTransferAmtOver {
+				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, "basic normal transfer not complete , logic error")
+			}
+
+			txListMap["UTXOInputs"] = utxoInputsArray
+			txListMap["Outputs"] = utxoOutputsArray
+			if common2.Conf.EarnReward {
+				txListMap["Fee"] = 100
+			} else {
+				txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
+			}
+
+			paraListMapTmp := make(map[string]interface{})
+			txListTmp := make([]map[string]interface{}, 0)
+			txListTmp = append(txListTmp, txListMap)
+			paraListMapTmp["Transactions"] = txListTmp
+			msg, err := json.Marshal(&paraListMapTmp)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
+			}
+			signature, err := crypto.Sign(NodePrivKey, msg)
+			if err != nil {
+				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
+			}
+			proof := make(map[string]interface{})
+			txListMap["Postmark"] = proof
+			proof["signature"] = hex.EncodeToString(signature)
+			proof["pub"] = hex.EncodeToString(NodePubKey)
+
+			txList = append(txList, txListMap)
 		}
 	}
+	paraListMap["Transactions"] = txList
 	if !hasEnoughFee {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 	}
-	utxoOutputsArray := make([]map[string]interface{}, 0)
-	for i, v := range outputs {
-		if i == 1 {
-			if config.Parameters.PowConfiguration.MinTxFee > 100 && common2.Conf.EarnReward {
-				utxoOutputsDetail := make(map[string]interface{})
-				utxoOutputsDetail["address"] = config.Parameters.PowConfiguration.PayToAddr
-				utxoOutputsDetail["amount"] = config.Parameters.PowConfiguration.MinTxFee - 100
-				utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
-			}
-		}
-		output := v.(map[string]interface{})
-		utxoOutputsDetail := make(map[string]interface{})
-		utxoOutputsDetail["address"] = output["addr"]
-		switch output["amt"].(type) {
-		case float64:
-			utxoOutputsDetail["amount"] = output["amt"].(float64)
-		case string:
-			var err error
-			utxoOutputsDetail["amount"], err = strconv.ParseFloat(output["amt"].(string), 64)
-			if err != nil {
-				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
-			}
-		case int64:
-			utxoOutputsDetail["amount"] = output["amt"].(int64)
-		default:
-			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Can not find amt in output")
-		}
-		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
-	}
-
-	leftMoney := spendMoney - int64(config.Parameters.PowConfiguration.MinTxFee) - smAmt
-	if leftMoney > 0 {
-		utxoOutputsDetail := make(map[string]interface{})
-		utxoOutputsDetail["address"] = inputs[0]
-		utxoOutputsDetail["amount"] = leftMoney
-		utxoOutputsArray = append(utxoOutputsArray, utxoOutputsDetail)
-	}
-
-	paraListMap["Transactions"] = txList
-	txListMap["UTXOInputs"] = utxoInputsArray
-	txListMap["Outputs"] = utxoOutputsArray
-	if common2.Conf.EarnReward {
-		txListMap["Fee"] = 100
-	} else {
-		txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
-	}
-	msg, err := json.Marshal(&paraListMap)
-	if err != nil {
-		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
-	}
-	signature, err := crypto.Sign(NodePrivKey, msg)
-	if err != nil {
-		return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
-	}
-	proof := make(map[string]interface{})
-	txListMap["Postmark"] = proof
-	proof["signature"] = hex.EncodeToString(signature)
-	proof["msg"] = hex.EncodeToString(msg)
-	proof["pub"] = hex.EncodeToString(NodePubKey)
 	return ResponsePackEx(ELEPHANT_SUCCESS, paraListMap)
 }
 
