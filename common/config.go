@@ -7,8 +7,9 @@ import (
 )
 
 type config struct {
-	Cmc Cmc
-	EarnReward bool
+	Cmc            Cmc
+	EarnReward     bool
+	BundleUtxoSize int
 }
 
 type Cmc struct {
