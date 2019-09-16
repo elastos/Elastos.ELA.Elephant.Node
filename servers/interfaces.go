@@ -2010,14 +2010,14 @@ func CreateVoteTx(param Params) map[string]interface{} {
 
 					// owner address
 					utxoOutputsDetail1["amount"] = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
-					normalTransferAmtOver = true
 				} else {
 					if currTxSum >= normalTransferLeft+int64(config.Parameters.PowConfiguration.MinTxFee) {
 						// first send address
 						utxoOutputsDetail["amount"] = normalTransferLeft
-
+						normalTransferLeft = 0
 						// owner address
 						utxoOutputsDetail1["amount"] = currTxSum - normalTransferLeft - int64(config.Parameters.PowConfiguration.MinTxFee)
+						normalTransferAmtOver = true
 					} else {
 						// first send address
 						utxoOutputsDetail["amount"] = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
