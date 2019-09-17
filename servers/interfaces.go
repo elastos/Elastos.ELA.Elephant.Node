@@ -709,7 +709,7 @@ func SendRawTx(param Params) map[string]interface{} {
 			return ResponsePackEx(ELEPHANT_PROCESS_ERROR, err.Error())
 		}
 
-		if !CheckTransactionReward(&txn) {
+		if common2.Conf.EarnReward && !CheckTransactionReward(&txn) {
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Invalid raw transaction, node reward address can not find or node reward amount not match")
 		}
 
@@ -719,6 +719,9 @@ func SendRawTx(param Params) map[string]interface{} {
 		retTxs = append(retTxs, ToReversedString(txn.Hash()))
 	}
 
+	if len(retTxs) == 1 {
+		return ResponsePackEx(ELEPHANT_SUCCESS, retTxs[0])
+	}
 	return ResponsePackEx(ELEPHANT_SUCCESS, retTxs)
 }
 
