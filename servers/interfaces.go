@@ -1837,11 +1837,7 @@ func CreateTx(param Params) map[string]interface{} {
 				txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
 			}
 
-			paraListMapTmp := make(map[string]interface{})
-			txListTmp := make([]map[string]interface{}, 0)
-			txListTmp = append(txListTmp, txListMap)
-			paraListMapTmp["Transactions"] = txListTmp
-			msg, err := json.Marshal(&paraListMapTmp)
+			msg, err := json.Marshal(&txListMap)
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
 			}
@@ -1870,6 +1866,11 @@ func CreateVoteTx(param Params) map[string]interface{} {
 	}
 	var utxoList [][]*blockchain.UTXO
 	var total int64
+	var multiTxNum = 0
+	var bundleUtxoSize = 100
+	if common2.Conf.BundleUtxoSize > 100 {
+		bundleUtxoSize = common2.Conf.BundleUtxoSize
+	}
 	for _, v := range inputs {
 		input, ok := v.(string)
 		if !ok {
@@ -1888,8 +1889,11 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		if err != nil {
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Internal error")
 		}
-		for _, utxo := range utxos {
+		for m, utxo := range utxos {
 			total += int64(utxo.Value)
+			if m == len(utxos)-1 {
+				multiTxNum = m/bundleUtxoSize + 1
+			}
 		}
 		utxoList = append(utxoList, utxos)
 	}
@@ -1925,21 +1929,16 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		sendAmt = int64(amt)
 		smAmt += int64(amt)
 	}
-	var left = total - smAmt - int64(config.Parameters.PowConfiguration.MinTxFee)
+	var left = total - smAmt - int64(config.Parameters.PowConfiguration.MinTxFee)*int64(multiTxNum)
 	if left < 0 {
 		return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Not Enough UTXO")
 	}
-	smAmt = total - int64(config.Parameters.PowConfiguration.MinTxFee)
+	smAmt = total - int64(config.Parameters.PowConfiguration.MinTxFee)*int64(multiTxNum)
 	outputs = append(outputs, map[string]interface{}{"addr": (inputs[0]).(string), "amt": left})
 
 	paraListMap := make(map[string]interface{})
 	txList := make([]map[string]interface{}, 0)
 	var index = -1
-	var multiTxNum = 0
-	var bundleUtxoSize = 100
-	if common2.Conf.BundleUtxoSize > 100 {
-		bundleUtxoSize = common2.Conf.BundleUtxoSize
-	}
 	var spendMoney int64 = 0
 	var hasEnoughFee bool = false
 	for i, utxos := range utxoList {
@@ -1950,7 +1949,6 @@ func CreateVoteTx(param Params) map[string]interface{} {
 		for j, utxo := range utxos {
 			index = j
 			spendMoney += int64(utxo.Value)
-			multiTxNum = j/bundleUtxoSize + 1
 			if spendMoney >= smAmt+int64(config.Parameters.PowConfiguration.MinTxFee*multiTxNum) {
 				hasEnoughFee = true
 				break
@@ -2014,14 +2012,14 @@ func CreateVoteTx(param Params) map[string]interface{} {
 					if currTxSum >= normalTransferLeft+int64(config.Parameters.PowConfiguration.MinTxFee) {
 						// first send address
 						utxoOutputsDetail["amount"] = normalTransferLeft
-						normalTransferLeft = 0
 						// owner address
 						utxoOutputsDetail1["amount"] = currTxSum - normalTransferLeft - int64(config.Parameters.PowConfiguration.MinTxFee)
+						normalTransferLeft = 0
 						normalTransferAmtOver = true
 					} else {
 						// first send address
 						utxoOutputsDetail["amount"] = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
-						normalTransferLeft = currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
+						normalTransferLeft -= currTxSum - int64(config.Parameters.PowConfiguration.MinTxFee)
 
 						// owner address
 						utxoOutputsDetail1["amount"] = 0
@@ -2036,10 +2034,6 @@ func CreateVoteTx(param Params) map[string]interface{} {
 				return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "Only support single output")
 			}
 
-			if !normalTransferAmtOver {
-				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, "basic normal transfer not complete , logic error")
-			}
-
 			txListMap["UTXOInputs"] = utxoInputsArray
 			txListMap["Outputs"] = utxoOutputsArray
 			if common2.Conf.EarnReward {
@@ -2048,11 +2042,7 @@ func CreateVoteTx(param Params) map[string]interface{} {
 				txListMap["Fee"] = config.Parameters.PowConfiguration.MinTxFee
 			}
 
-			paraListMapTmp := make(map[string]interface{})
-			txListTmp := make([]map[string]interface{}, 0)
-			txListTmp = append(txListTmp, txListMap)
-			paraListMapTmp["Transactions"] = txListTmp
-			msg, err := json.Marshal(&paraListMapTmp)
+			msg, err := json.Marshal(&txListMap)
 			if err != nil {
 				return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, err.Error())
 			}
@@ -2066,6 +2056,10 @@ func CreateVoteTx(param Params) map[string]interface{} {
 			proof["pub"] = hex.EncodeToString(NodePubKey)
 
 			txList = append(txList, txListMap)
+		}
+
+		if !normalTransferAmtOver {
+			return ResponsePackEx(ELEPHANT_INTERNAL_ERROR, "basic normal transfer not complete , logic error")
 		}
 	}
 	paraListMap["Transactions"] = txList
