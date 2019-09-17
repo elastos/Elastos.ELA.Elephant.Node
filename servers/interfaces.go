@@ -683,8 +683,10 @@ func SendRawTx(param Params) map[string]interface{} {
 
 	str, ok := param.String("data")
 	var rawTxs []interface{}
+	var t int
 	if ok {
 		rawTxs = append(rawTxs, str)
+		t = 1
 	} else {
 		rawTxs, ok = param["data"].([]interface{})
 		if !ok {
@@ -693,6 +695,7 @@ func SendRawTx(param Params) map[string]interface{} {
 		if !ok {
 			return ResponsePackEx(ELEPHANT_ERR_BAD_REQUEST, "not valid request format")
 		}
+		t = 2
 	}
 	var retTxs []string
 	for _, rawTx := range rawTxs {
@@ -719,7 +722,7 @@ func SendRawTx(param Params) map[string]interface{} {
 		retTxs = append(retTxs, ToReversedString(txn.Hash()))
 	}
 
-	if len(retTxs) == 1 {
+	if t == 1 {
 		return ResponsePackEx(ELEPHANT_SUCCESS, retTxs[0])
 	}
 	return ResponsePackEx(ELEPHANT_SUCCESS, retTxs)
